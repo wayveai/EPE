@@ -38,7 +38,7 @@ def material_from_gt_label(gt_labelmap):
 	return shader_map
 
 
-class PfDDataset(SyntheticDataset):
+class SimDataset(SyntheticDataset):
 	def __init__(self, paths, transform=None, gbuffers='fake'):
 		"""
 
@@ -46,7 +46,7 @@ class PfDDataset(SyntheticDataset):
 		paths -- list of tuples with (img_path, robust_label_path, gbuffer_path, gt_label_path)
 		"""
 
-		super(PfDDataset, self).__init__('GTA')
+		super(SimDataset, self).__init__('GTA')
 
 		assert gbuffers in ['all', 'img', 'no_light', 'geometry', 'fake']
 
@@ -118,7 +118,7 @@ class PfDDataset(SyntheticDataset):
 			raise FileNotFoundError
 			pass
 
-		data = np.load(gbuffer_path)
+		data = np.load(gbuffer_path, allow_pickle=True)
 
 		if self.gbuffers == 'fake':
 			img       = mat2tensor(imageio.imread(img_path).astype(np.float32) / 255.0)

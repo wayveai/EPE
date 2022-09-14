@@ -46,7 +46,7 @@ vgg_losses = {\
 
 
 fake_datasets = {\
-	'GTA':ds.PfDDataset,
+	'sim':ds.SimDataset,
 }
 
 
