@@ -26,9 +26,15 @@ real_dataset:
 
 fake_dataset: 
   name: sim
+
   train_filelist: /home/kacper/data/EPE/sim/train.csv # file with paths to image, gbuffers, robust labels, and gt labels (for deriving material segmentation) in each line.
   val_filelist: /home/kacper/data/EPE/sim/train.csv # see above
   test_filelist: /home/kacper/data/EPE/sim/train.csv # see above
+
+  # train_filelist: /home/kacper/data/EPE/sim/train_depth.csv # file with paths to image, gbuffers, robust labels, and gt labels (for deriving material segmentation) in each line.
+  # val_filelist: /home/kacper/data/EPE/sim/train_depth.csv # see above
+  # test_filelist: /home/kacper/data/EPE/sim/train_depth.csv # see above
+
   # val_filelist: /home/kacper/data/EPE/sim/val.txt # see above
   # test_filelist: /home/kacper/data/EPE/sim/test.txt # see above
   sampling: 
