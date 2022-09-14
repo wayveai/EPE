@@ -5,3 +5,5 @@
 local_epe.egg-info
 log
 out
+EPE.code-workspace
+launch.json
