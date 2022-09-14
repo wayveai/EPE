@@ -118,7 +118,7 @@ class SimDataset(SyntheticDataset):
 			raise FileNotFoundError
 			pass
 
-		data = np.load(gbuffer_path, allow_pickle=True)
+		data = np.load(gbuffer_path)
 
 		if self.gbuffers == 'fake':
 			img       = mat2tensor(imageio.imread(img_path).astype(np.float32) / 255.0)
