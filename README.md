@@ -53,37 +53,37 @@ We also provide a discriminator without using those labels. In case you want to 
 
 First, we need to sample crops from source and target datasets and compute VGG features on those crops. As a default, we sample 15 crops per image. But, depending on the size of your dataset, increasing the number of sampled crops may be beneficial. The csv files for the datasets contain per row the paths to the images of each dataset.
     
-    python epe/matching/feature_based/collect_crops.py PfD pfd_files.csv 		# creates crop_PfD.csv, crop_Pfd.npz
-    python epe/matching/feature_based/collect_crops.py Cityscapes cs_files.csv	# creates crop_Cityscapes.csv, crop_Cityscapes.npz
+    python epe/matching/feature_based/collect_crops.py sim ../../data/EPE/sim_rgb_files.csv 		# creates crop_sim.csv, crop_sim.npz
+    python epe/matching/feature_based/collect_crops.py real ../../data/EPE/real_rgb_files.csv	# creates crop_real.csv, crop_real.npz
 
 The generated csv files contain path and coordinates, the npz files contain the features.
 
-Second, for each crop in source dataset (here PfD), find k (here 10) nearest neighbours in target dataset (here Cityscapes).
+Second, for each crop in source dataset (here sim), find k (here 10) nearest neighbours in target dataset (here real).
 This step (and only this one) requires [faiss](https://github.com/facebookresearch/faiss).
 
-    python epe/matching/feature_based/find_knn.py crop_PfD.npz crop_Cityscapes.npz knn_PfD-Cityscapes.npz -k 10
+    python epe/matching/feature_based/find_knn.py crop_sim.npz crop_real.npz knn_sim-real.npz -k 10
 
 Third, we filter neighbours based on feature distance: 1.0 works well.
 
-    python epe/matching/filter.py knn_PfD-Cityscapes.npz crop_PfD.csv crop_Cityscapes.csv 1.0 matched_crops_PfD-Cityscapes.csv
+    python epe/matching/filter.py knn_sim-real.npz crop_sim.csv crop_real.csv 1.0 matched_crops_sim-real.csv
 
 As a rough guidance, the csv with matched crops should contain at least 200K pairs (lines), more is better. If your datasets are smaller than the ones we used, or differ more, we strongly recommend increasing the number of sampled crops as well as the number of neighbours (the -k in the second step). We advise against increasing the threshold for the feature distance (third step) as this will ultimately decrease quality (by requiring a stricter VGG loss later to reduce artifacts). For visualization we provide a script that samples matches for a set of thresholds (sample_matches.py).
 
 Fourth, we compute sampling weights such that all locations in the source dataset will be sampled at the same frequency. This is necessary for preventing oversampling only regions that are well matched between datasets (e.g. just cars for GTA/Cityscape). The magic numbers 526 and 957 are image height and width of the source dataset (here Playing for Data).
     
-    python epe/matching/compute_weights.py matched_crops_PfD-Cityscapes.csv 526 957 crop_weights_PfD-Cityscapes.npz
+    python epe/matching/compute_weights.py matched_crops_sim-real.csv 526 957 crop_weights_sim-real.npz
 
 ## Training a model
 
-After modifying the paths in the config (./config/train_pfd2cs.yaml), we are ready to go:
+After modifying the paths in the config (./config/train_sim2real.yaml), we are ready to go:
 
-    python epe/EPEExperiment.py train ./config/train_pfd2cs.yaml --log=info
+    python epe/EPEExperiment.py train ./config/train_sim2real.yaml --log=info
     
 ## Running a model
 
 For testing the model, paths and checkpoint to load need to be specified in the config. Then we can run:
 
-    python epe/EPEExperiment.py test ./config/test_pfd2cs.yaml
+    python epe/EPEExperiment.py test ./config/test_sim2real.yaml
 
 ## Differences to the paper
 
