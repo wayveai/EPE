@@ -174,6 +174,38 @@ class AzureCredentials:
 
         raise RuntimeError('Failed all authentication methods')
 
+def image_match_desired_size(img, width_new, height_new):
+    width, height = img.size
+
+    old_aspect = width / height
+    new_aspect = width_new / height_new
+
+    # rescale on smaller dimension (aspect ratio wise)
+    # then crop excess
+    if new_aspect > old_aspect:
+        scale = width_new / width
+        height = int(scale * height)
+        width = width_new
+    else:
+        scale = height_new / height
+        height = height_new
+        width = int(scale * width)
+
+    # resizing to match desired height
+    img = img.resize((width, height))
+
+    # cropping to match desired width
+    center_x = width // 2
+    left = center_x - width_new//2
+    right = center_x + width_new//2
+
+    center_y = height // 2
+    top = center_y - height_new//2
+    bottom = center_y + height_new//2
+    img = img.crop((left, top, right, bottom))
+
+    return img
+
 
 # %%
 class AzureImageLoader:
@@ -232,6 +264,10 @@ class AzureImageLoader:
         output = self.load(run_id, camera, timestamp, mode=mode) 
         return Image.open(output)
             
+
+    def load_img_from_path_and_resize(self, path, width, height):
+        img = self.load_img_from_path(path)
+        return image_match_desired_size(img, width, height)
 
     def load_sim_img_from_path(self, path):
         blob_client = self.sim_service.get_blob_client(path)
