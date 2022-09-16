@@ -6,6 +6,8 @@ import numpy as np
 from skimage.transform import resize
 import scipy.io as sio
 import torch
+from dataset.azure_loader import AzureImageLoader
+
 
 from .batch_types import EPEBatch
 from .synthetic import SyntheticDataset
@@ -63,6 +65,7 @@ class SimDataset(SyntheticDataset):
 				pass
 			pass
 
+		self.azure_loader = AzureImageLoader()
 
 		try:
 			data = np.load(Path(__file__).parent / 'pfd_stats.npz')
