@@ -215,22 +215,51 @@ class AzureImageLoader:
             raise NotImplementedError(str(i))
         # print('initialized BlobServiceClient: %s'%account_name)
 
-    def load(self, run_id, camera, timestamp, mode='image', calibration_hash=None, hot=True, auth_attempts=1) -> BytesIO:
+    def load_from_path(self, path):
+        path = path.split('/')
+        run_id = '/'.join(path[:2])
+        camera = path[3]
+
+        mode = 'rgb'
+        if 'ningaloo' in run_id:
+            camera_split = camera.split('--')
+            camera = camera_split[0]
+            mode = camera_split[1]
+
+        name = path[4]
+        timestamp = int(name.replace('unixus.jpeg', ''))
+        return self.load(run_id, camera, timestamp, mode=mode)
+
+
+    def load_sim_img_from_path(self, path):
+        blob_client = self.sim_service.get_blob_client(path)
+        try:
+            if blob_client.exists():  # TODO: this extra check is a bit slow but prevents a memory leak (when using ddp+workers)
+                data = blob_client.download_blob().readall()
+                output = BytesIO(data)
+                return output
+            else:
+                raise ResourceNotFoundError
+
+        except ResourceNotFoundError:
+            print('image not in sim storage: ', path)
+            return None
+
+    def load(self, run_id, camera, timestamp, mode='rgb', calibration_hash=None, hot=True, auth_attempts=1) -> BytesIO:
         if run_id[:8] == 'ningaloo':
             hot = False
             shard_index = -2
-            mode_map = {'image': 'rgb', 'semseg': 'segmentation', 'depth': 'depth'}
-            ext_map = {'image': 'jpeg', 'semseg': 'png', 'depth': 'png'}
-            blob_name = f'{run_id}/cameras/{camera}--{mode_map[mode]}/{timestamp:012d}unixus.{ext_map[mode]}'
+            ext_map = {'rgb': 'jpeg', 'segmentation': 'png', 'depth': 'png'}
+            blob_name = f'{run_id}/cameras/{camera}--{mode}/{timestamp:012d}unixus.{ext_map[mode]}'
+            print(blob_name)
             blob_client = self.sim_service.get_blob_client('images', blob_name)
-
         elif hot:
             timestamp_sec = int(timestamp / 1e6)
             shard_index = timestamp_sec % self.shards
-            if mode == 'image':
+            if mode == 'rgb':
                 container = 'image-cache'
                 full_name = f'jpeg-full_resolution/{run_id}/cameras/{camera}/{timestamp:012d}unixus.jpeg'
-            elif mode == 'semseg':
+            elif mode == 'segmentation':
                 # assert calibration_hash is not None
                 container = 'teacher-cache'
                 full_name = f'{TEACHER_SEMSEG}/{run_id}/{camera}/{calibration_hash}/{timestamp:012d}unixus.png'
@@ -242,6 +271,8 @@ class AzureImageLoader:
                 full_name = f'{TEACHER_CUBOID}/json-1920x1200/{run_id}/cameras/{camera}/{timestamp:012d}unixus.json'
             else:
                 raise NotImplementedError(mode)
+            
+            print(full_name)
 
             blob_client = self.hot_services[shard_index].get_blob_client(container, full_name)
         else:
@@ -251,7 +282,7 @@ class AzureImageLoader:
         try:
             if blob_client.exists():  # TODO: this extra check is a bit slow but prevents a memory leak (when using ddp+workers)
                 data = blob_client.download_blob().readall()
-                if mode in ['image', 'semseg', 'depth']:
+                if mode in ['rgb', 'segmentation', 'depth']:
                     output = BytesIO(data)  # this needs to be in try block in case data is corrupted
                 else:
                     output = BytesIO(data)
@@ -260,7 +291,7 @@ class AzureImageLoader:
 
         except ResourceNotFoundError:
             # if not in hot cache try to load from cold storage
-            if hot and mode == 'image':
+            if hot and mode == 'rgb':
                 return self.load(run_id, camera, timestamp, mode, calibration_hash, False)
             else:
                 print('image not in hot nor cold storage:', run_id, camera, timestamp, mode)
