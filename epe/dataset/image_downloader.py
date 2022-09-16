@@ -88,14 +88,13 @@ for i in tqdm(range(MAX_IMAGES)):
     run_id = sim_df.iloc[i]['run_id_noseginfix']
     ts = sim_df.iloc[i]['front-forward_image_timestamp_rgb']
     for camera in ['front-forward']:
-        for mode in ['image', 'depth', 'semseg']:
-            mode_out = 'rgb' if mode == 'image' else mode
+        for mode in ['rgb', 'depth', 'segmentation']:
             output = loader.load(run_id, camera, ts, mode = mode)
             img = Image.open(output)
-            ext_map = {'image': 'jpeg', 'semseg': 'png', 'depth': 'png'}
+            ext_map = {'rgb': 'jpeg', 'segmentation': 'png', 'depth': 'png'}
 
             img = image_match_desired_size(img, EPE_WIDTH, EPE_HEIGHT)
-            img.save(os.path.join(data_save_root, "sim", mode_out, str(i).zfill(4) + f".{ext_map[mode]}"))
+            img.save(os.path.join(data_save_root, "sim", mode, str(i).zfill(4) + f".{ext_map[mode]}"))
 
 # %%
 INTRINSICS = 1134.1, 0.0, 1020.2, 0.0, 1135.2, 640.39, 0.0, 0.0, 1.0
