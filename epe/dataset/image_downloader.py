@@ -7,7 +7,18 @@ import os
 from PIL import Image
 import numpy as np
 import cv2
+import json
+# %%
+def semantic_conversion(seg, file):
+    with open(file, 'r') as f:
+        js = json.load(f)
+    js = js['Classes']
+    replace = {x['id']:x['conversion']['universal'] for x in js}
 
+    func = lambda x: replace[x]
+    func = np.vectorize(func)
+    seg = func(seg)
+    return seg
 # %%
 def image_match_desired_size(img, width_new, height_new):
     width, height = img.size
