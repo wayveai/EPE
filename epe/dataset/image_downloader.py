@@ -81,6 +81,7 @@ MAX_IMAGES = 100
 camera = "front-forward"
 loader = AzureImageLoader()
 data_save_root = '/home/kacper/data/EPE'
+semantic_conversion_classes_file = '/home/kacper/code/EPE/wayve_v3_mseg.json'
 # %%
 # Download SIM
 for i in tqdm(range(MAX_IMAGES)):
@@ -90,9 +91,17 @@ for i in tqdm(range(MAX_IMAGES)):
         for mode in ['image', 'depth', 'semseg']:
             mode_out = 'rgb' if mode == 'image' else mode
             output = loader.load(run_id, camera, ts, mode = mode)
-            img = Image.open(output).convert("RGB")
+            img = Image.open(output)
+            extension = '.jpeg'
+            if mode == 'image':
+                extension = '.jpeg'
+            elif mode == 'semseg':
+                extension = '.png'
+            elif mode == 'depth':
+                extension = '.png'
+
             img = image_match_desired_size(img, EPE_WIDTH, EPE_HEIGHT)
-            img.save(os.path.join(data_save_root, "sim", mode_out, str(i).zfill(4) + '.jpg'))
+            img.save(os.path.join(data_save_root, "sim", mode_out, str(i).zfill(4) + extension))
 
 # %%
 INTRINSICS = 1134.1, 0.0, 1020.2, 0.0, 1135.2, 640.39, 0.0, 0.0, 1.0
