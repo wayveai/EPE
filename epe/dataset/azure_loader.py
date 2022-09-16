@@ -19,6 +19,7 @@ from azure.core.exceptions import ClientAuthenticationError, HttpResponseError, 
 from azure.storage.blob import BlobServiceClient
 from requests.exceptions import RequestException
 from retry import retry
+from PIL import Image
 
 
 TEACHER_SEMSEG = 'segmentation/panoptic_deeplab_960x448_f=360'
@@ -215,7 +216,7 @@ class AzureImageLoader:
             raise NotImplementedError(str(i))
         # print('initialized BlobServiceClient: %s'%account_name)
 
-    def load_from_path(self, path):
+    def load_img_from_path(self, path):
         path = path.split('/')
         run_id = '/'.join(path[:2])
         camera = path[3]
@@ -228,8 +229,9 @@ class AzureImageLoader:
 
         name = path[4]
         timestamp = int(name.replace('unixus.jpeg', ''))
-        return self.load(run_id, camera, timestamp, mode=mode)
-
+        output = self.load(run_id, camera, timestamp, mode=mode) 
+        return Image.open(output)
+            
 
     def load_sim_img_from_path(self, path):
         blob_client = self.sim_service.get_blob_client(path)
@@ -333,5 +335,7 @@ class AzureImageLoader:
     def get_image_timestamps(self, runid, camera):
         # print("getting timestamps")
         return self.get_timestamps(os.path.join(runid, 'cameras', camera))
+
+# %%
 
 # %%
