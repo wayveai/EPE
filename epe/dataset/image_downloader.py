@@ -92,16 +92,10 @@ for i in tqdm(range(MAX_IMAGES)):
             mode_out = 'rgb' if mode == 'image' else mode
             output = loader.load(run_id, camera, ts, mode = mode)
             img = Image.open(output)
-            extension = '.jpeg'
-            if mode == 'image':
-                extension = '.jpeg'
-            elif mode == 'semseg':
-                extension = '.png'
-            elif mode == 'depth':
-                extension = '.png'
+            ext_map = {'image': 'jpeg', 'semseg': 'png', 'depth': 'png'}
 
             img = image_match_desired_size(img, EPE_WIDTH, EPE_HEIGHT)
-            img.save(os.path.join(data_save_root, "sim", mode_out, str(i).zfill(4) + extension))
+            img.save(os.path.join(data_save_root, "sim", mode_out, str(i).zfill(4) + f".{ext_map[mode]}"))
 
 # %%
 INTRINSICS = 1134.1, 0.0, 1020.2, 0.0, 1135.2, 640.39, 0.0, 0.0, 1.0
