@@ -7,3 +7,5 @@ log
 out
 EPE.code-workspace
 launch.json
+
+wandb
