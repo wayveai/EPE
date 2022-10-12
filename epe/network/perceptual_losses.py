@@ -4,6 +4,7 @@ import lpips
 import torch
 import torch.nn as nn
 
+EPSILON = 1e-06
 
 class LPIPSLoss(nn.Module):
 	def __init__(self, net):
@@ -15,7 +16,7 @@ class LPIPSLoss(nn.Module):
 		pass
 
 	def forward_fake(self, img, rec):
-		return self.model.forward(img, rec, retPerLayer=False, normalize=True)[0], []
+		return self.model.forward(img + EPSILON, rec + EPSILON, retPerLayer=False, normalize=True)[0], []
 		
 
 def vgg_munit(vgg, img, rec):
@@ -53,4 +54,4 @@ class VGGLoss(nn.Module):
 		pass
 	
 	def forward_fake(self, img, rec):
-		return self.loss_func(self.vgg, img, rec)
+		return self.loss_func(self.vgg, img + EPSILON, rec + EPSILON)
