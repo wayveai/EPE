@@ -53,8 +53,8 @@ We also provide a discriminator without using those labels. In case you want to 
 
 First, we need to sample crops from source and target datasets and compute VGG features on those crops. As a default, we sample 15 crops per image. But, depending on the size of your dataset, increasing the number of sampled crops may be beneficial. The csv files for the datasets contain per row the paths to the images of each dataset.
     
-    python epe/matching/feature_based/collect_crops.py sim ../../data/EPE/sim_rgb_files.csv 		# creates crop_sim.csv, crop_sim.npz
-    python epe/matching/feature_based/collect_crops.py real ../../data/EPE/real_rgb_files.csv	# creates crop_real.csv, crop_real.npz
+    python epe/matching/feature_based/collect_crops.py sim ../../data/EPE/somers_town/sim_files.csv 		# creates crop_sim.csv, crop_sim.npz
+    python epe/matching/feature_based/collect_crops.py real ../../data/EPE/somers_town/real_files.csv	# creates crop_real.csv, crop_real.npz
 
 The generated csv files contain path and coordinates, the npz files contain the features.
 
