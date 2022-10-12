@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 
+EPSILON=1e-08
 
 class HingeLoss(nn.Module):
 	def __init__(self):
@@ -21,6 +22,8 @@ class HingeLoss(nn.Module):
 
 @torch.jit.script
 def _fw_ls_real(input):
+	EPSILON = 1e-8
+	input[input.isnan()] = EPSILON
 	return (1-input).pow(2)
 
 class LSLoss(nn.Module):
@@ -39,7 +42,8 @@ class LSLoss(nn.Module):
 		return _fw_ls_real(input)
 
 	def forward_fake(self, input):
-		return input.pow(2)
+		input[input.isnan()] = EPSILON
+		return (input).pow(2)
 
 
 class NSLoss(nn.Module):
