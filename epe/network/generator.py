@@ -3,7 +3,8 @@ import torch.nn as nn
 
 @torch.jit.script
 def make_residual(img, x):
-	return torch.sigmoid(-torch.log(1 / img.clamp(min=0.001, max=0.999) - 1) + x)
+	epsilon=1e-08
+	return torch.sigmoid(-torch.log((1 / (img.clamp(min=0.001, max=0.999) + epsilon)) - 1) + x)
 
 
 class ResidualGenerator(nn.Module):
@@ -13,5 +14,7 @@ class ResidualGenerator(nn.Module):
 		pass
 
 	def forward(self, epe_batch):
-		return make_residual(epe_batch.img, self.network(epe_batch))
+		net_out = self.network(epe_batch)
+		x = make_residual(epe_batch.img, net_out)
+		return x
 
