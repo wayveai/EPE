@@ -26,7 +26,11 @@ def make_conv_layer(dims, strides=1, leaky_relu=True, spectral=False, norm_facto
 	norm_factory -- function taking a channel width and returning a normalization layer.
 	skip_final_relu -- don't use a relu at the end
 	kernel -- width of kernel
+
 	"""
+
+	spectral = False
+	assert not spectral
 
 	if type(strides) == int:
 		strides = [strides] + [1] * (len(dims)-2)
@@ -74,7 +78,9 @@ class ResBlock(nn.Module):
 		pass
 
 	def forward(self, x):
-		return self.relu(self.conv(x) + (x if self.down is None else self.down(x)))
+		epsilon = 1e-8
+		dw = x if self.down is None else self.down(x + epsilon)
+		return self.relu(self.conv(x) + dw)
 
 
 class Res2Block(nn.Module):
