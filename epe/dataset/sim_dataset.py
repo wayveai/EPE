@@ -6,17 +6,23 @@ import numpy as np
 from skimage.transform import resize
 import scipy.io as sio
 import torch
-from dataset.azure_loader import AzureImageLoader
+from epe.dataset.azure_loader import AzureImageLoader
+import os
+import random
+import wandb
+from tqdm import tqdm
+from torchvision.transforms import Resize
 
 
 from .batch_types import EPEBatch
 from .synthetic import SyntheticDataset
 from .utils import mat2tensor, normalize_dim
 
+from .image_conversion import normal_to_normalised_normal, np_inverse_depth_invm_to_depth_m_normalized, np_inverse_depth_normalized_to_depth_m
+
 def center(x, m, s):
-	x[0,:,:] = (x[0,:,:] - m[0]) / s[0]
-	x[1,:,:] = (x[1,:,:] - m[1]) / s[1]
-	x[2,:,:] = (x[2,:,:] - m[2]) / s[2]
+	for i in range(x.shape[0]):
+		x[i,:,:] = (x[i,:,:] - m[i]) / s[i]
 	return x
 
 
@@ -41,23 +47,27 @@ def material_from_gt_label(gt_labelmap):
 
 
 class SimDataset(SyntheticDataset):
-	def __init__(self, paths, transform=None, gbuffers='fake'):
+	def __init__(self, paths, transform=None, gbuffers='fake', data_root='', shape=(600, 960), mean=None, std=None):
 		"""
 
 
-		paths -- list of tuples with (img_path, robust_label_path, gbuffer_path, gt_label_path)
+		# Note that last arguments will be gbuffer PATHS! to allow for flexibility
+		paths -- list of tuples with (img_path, robust_label_path, gt_label_path, gbuffer_paths)
 		"""
 
 		super(SimDataset, self).__init__('GTA')
 
-		assert gbuffers in ['all', 'img', 'no_light', 'geometry', 'fake']
+		# assert gbuffers in ['all', 'img', 'no_light', 'geometry', 'fake', 'depth']
 
 		self.transform = transform
 		self.gbuffers  = gbuffers
+		self.data_root = data_root
+		self.shape = shape
+
 		# self.shader    = class_type
 
 		self._paths    = paths
-		self._path2id  = {p[0].stem:i for i,p in enumerate(self._paths)}
+		self._path2id  = {Path(p[0]).stem:i for i,p in enumerate(self._paths)}
 		if self._log.isEnabledFor(logging.DEBUG):
 			self._log.debug(f'Mapping paths to dataset IDs (showing first 30 entries):')
 			for i,(k,v) in zip(range(30),self._path2id.items()):
@@ -67,34 +77,35 @@ class SimDataset(SyntheticDataset):
 
 		self.azure_loader = AzureImageLoader()
 
-		try:
-			data = np.load(Path(__file__).parent / 'pfd_stats.npz')
-			# self._img_mean  = data['i_m']
-			# self._img_std   = data['i_s']
-			self._gbuf_mean = data['g_m']
-			self._gbuf_std  = data['g_s']
-			self._log.info(f'Loaded dataset stats.')
-		except:
-			# self._img_mean  = None
-			# self._img_std   = None
-			self._gbuf_mean = None
-			self._gbuf_std  = None
-			pass
-
 		self._log.info(f'Found {len(self._paths)} samples.')
-		pass
+
+		self.resize = Resize(self.shape)
+
+		self.gbuf_mean = mean
+		self.gbuf_std  = std
+		if mean is None or std is None:
+			self.compute_gbuffer_statistics()
+
+
+
 
 
 	@property
 	def num_gbuffer_channels(self):
 		""" Number of image channels the provided G-buffers contain."""
-		return {'fake':32, 'all':26, 'img':0, 'no_light':17, 'geometry':8}[self.gbuffers]
+		channels = 0
+		for buffer in self.gbuffers:
+			channels += {'depth': 1, 'normal':4}[buffer]
+
+		return channels
+		# return {'fake':32, 'all':26, 'img':0, 'no_light':17, 'geometry':8, 'depth': 1}[self.gbuffers]
 
 
 	@property
 	def num_classes(self):
 		""" Number of classes in the semantic segmentation maps."""
-		return {'fake':12, 'all':12, 'img':0, 'no_light':0, 'geometry':0}[self.gbuffers]
+		return 12
+		# return {'fake':12, 'all':12, 'img':0, 'no_light':0, 'geometry':0, 'depth': 12}[self.gbuffers]
 
 
 	@property
@@ -106,51 +117,89 @@ class SimDataset(SyntheticDataset):
 		else:
 			return {}
 
+	def compute_gbuffer_statistics(self):
+		indices = list(range(self.__len__()))
+		random.shuffle(indices)
+		acc_std = 0
+		acc_mean = 0
+		counter = 0
+
+		print('Computing gbuffer statistics...')
+		for i in tqdm(indices[:1000]):
+			batch = self[i]
+			gbuffers = batch.gbuffers
+			std, mean = torch.std_mean(gbuffers, (0, 2, 3))
+			acc_std += std
+			acc_mean += mean
+			counter += 1
+
+		self.gbuf_mean = acc_mean / counter
+		self.gbuf_std  = acc_std / counter
+
+		data = zip(self.gbuf_mean.tolist(), self.gbuf_std.tolist())
+		data = list(data)
+		table = wandb.Table(columns=["mean", "std"], data=data)
+		wandb.log({'mean_std': table})
+
+
 
 	def get_id(self, img_filename):
 		return self._path2id.get(Path(img_filename).stem)
 
+	def load_file(self, path):
+		local_path = os.path.join(self.data_root, path)
+		if os.path.exists(local_path):
+			img = imageio.imread(local_path)
+
+			if '--depth' in local_path:
+				img = img.astype(np.uint16)
+			else:
+				img = img.astype(np.float32)
+		else:
+			img = np.array(self.azure_loader.load_img_from_path_and_resize(path, *self.shape))
+
+		return img
+
 
 	def __getitem__(self, index):
+		# TODO: check if either local or azure file exists, else skip
 
 		index  = index % self.__len__()
-		img_path, robust_label_path, gbuffer_path, gt_label_path = self._paths[index]
+		img_path, gt_label_path, robust_label_path = self._paths[index][:3]
+		g_buffer_paths = self._paths[index][3:]
 
-		if not gbuffer_path.exists():
-			self._log.error(f'Gbuffers at {gbuffer_path} do not exist.')
-			raise FileNotFoundError
-			pass
 
-		data = np.load(gbuffer_path)
+		g_data = []
+		for g_buffer_path in g_buffer_paths:
+			buffer = self.load_file(g_buffer_path)
+			if '--depth' in g_buffer_path:
+				buffer = np.array(buffer, dtype=np.uint16)
+				buffer = np_inverse_depth_normalized_to_depth_m(buffer)
+				buffer = np.expand_dims(buffer, axis=-1)
+				# buffer = (np.clip(buffer, 0, max_depth_m) / max_depth_m) * 2 - 1
+			if '--normal' in g_buffer_path:
+				buffer = normal_to_normalised_normal(buffer)
 
-		if self.gbuffers == 'fake':
-			img       = mat2tensor(imageio.imread(img_path).astype(np.float32) / 255.0)
-			gbuffers  = mat2tensor(data['data'].astype(np.float32))
-			gt_labels = material_from_gt_label(imageio.imread(gt_label_path))
-			if gt_labels.shape[0] != img.shape[-2] or gt_labels.shape[1] != img.shape[-1]:
-				gt_labels = resize(gt_labels, (img.shape[-2], img.shape[-1]), anti_aliasing=True, mode='constant')
-			gt_labels = mat2tensor(gt_labels)
-			pass
-		else:
-			img       = mat2tensor(data['img'].astype(np.float32) / 255.0)
-			gbuffers  = mat2tensor(data['gbuffers'].astype(np.float32))
-			gt_labels = mat2tensor(data['shader'].astype(np.float32))
-			pass
+			buffer = np.transpose(buffer, (2, 0, 1))
+			g_data.append(buffer)
+		# TODO Double check the dimensions of this
+		g_data = np.concatenate(g_data)
+
+		img = mat2tensor(self.load_file(img_path).astype(np.float32) / 255.0)
+		img = self.resize(img)
+		gbuffers = torch.from_numpy(g_data.astype(np.float32)).float()
+		gt_labels = mat2tensor(material_from_gt_label(self.load_file(gt_label_path)))
+		# gt_labels = mat2tensor(self.load_file(gt_label_path).astype(np.float32))
 
 		if torch.max(gt_labels) > 128:
 			gt_labels = gt_labels / 255.0
 			pass
 
-		if self._gbuf_mean is not None:
-			gbuffers = center(gbuffers, self._gbuf_mean, self._gbuf_std)
+		if self.gbuf_mean is not None:
+			gbuffers = center(gbuffers, self.gbuf_mean, self.gbuf_std)
 			pass
 
-		if not robust_label_path.exists():
-			self._log.error(f'Robust labels at {robust_label_path} do not exist.')
-			raise FileNotFoundError
-			pass
-
-		robust_labels = imageio.imread(robust_label_path)
+		robust_labels = self.load_file(robust_label_path)
 		robust_labels = torch.LongTensor(robust_labels[:,:]).unsqueeze(0)
 
 		return EPEBatch(img, gbuffers=gbuffers, gt_labels=gt_labels, robust_labels=robust_labels, path=img_path, coords=None)
