@@ -4,6 +4,8 @@ from pathlib import Path
 import imageio
 import torch
 
+from epe.dataset.azure_loader import AzureImageLoader
+
 from .batch_types import EPEBatch
 from .image_datasets import ImageDataset
 from .utils import mat2tensor
@@ -11,7 +13,7 @@ from .utils import mat2tensor
 logger = logging.getLogger('epe.dataset.robust')
 
 class RobustlyLabeledDataset(ImageDataset):
-	def __init__(self, name, img_and_robust_label_paths, img_transform=None, label_transform=None):
+	def __init__(self, name, img_and_robust_label_paths, img_transform=None, label_transform=None, data_root='', shape=(600, 960)):
 		""" Create an image dataset with robust labels.
 
 		name -- Name of dataset, used for debug output and finding corresponding sampling strategy
@@ -21,13 +23,19 @@ class RobustlyLabeledDataset(ImageDataset):
 		"""
 		self._log = logging.getLogger(f'epe.dataset.{name}')
 
+		self.data_root = data_root
+		self.shape = shape
+		self.azure_loader = AzureImageLoader()
+
 		self._img2label = {}
 		for img_path,lab_path in img_and_robust_label_paths:
 			img_path = Path(img_path)
 			lab_path = Path(lab_path)
 
-			if img_path.is_file() and img_path.suffix in ['.jpg', '.png'] and \
-				lab_path.is_file() and lab_path.suffix == '.png':
+			# removing file existance check since we're accessing azure.
+			# TODO: could attempt to query azure to check file existance
+			if img_path.suffix in ['.jpg', '.jpeg', '.png'] and \
+				lab_path.suffix == '.png':
 				self._img2label[img_path] = lab_path
 				pass
 			pass
@@ -63,7 +71,7 @@ class RobustlyLabeledDataset(ImageDataset):
 		img = mat2tensor(img)
 
 		label_path    = self._img2label[img_path]
-		robust_labels = imageio.imread(label_path)
+		robust_labels = self._load_img(label_path)
 
 		if self.label_transform is not None:
 			robust_labels = self.label_transform(robust_labels)

@@ -7,7 +7,7 @@ import torch.utils.data
 from tqdm import tqdm
 
 from epe.dataset import ImageBatch, ImageDataset
-from epe.dataset.utils import read_filelist
+from epe.dataset.utils import read_azure_filelist, read_filelist
 from epe.network import VGG16
 
 
@@ -26,6 +26,7 @@ Instead of these fake G-buffers generated from images, we strongly recommend ext
     parser.add_argument('img_list', type=Path, help="Path to csv file with path to images in first column.")
     parser.add_argument('-n', '--num_loaders', type=int, default=1)
     parser.add_argument('--out_dir', type=Path, help="Where to store the fake gbuffer.", default='.')
+    parser.add_argument('--data_root', type=Path, help="Where to find local images", default='')
     args = parser.parse_args()
 
     network   = VGG16(False, padding='none').to(device)
@@ -38,7 +39,7 @@ Instead of these fake G-buffers generated from images, we strongly recommend ext
     crop_size = 196 # VGG-16 receptive field at relu 5-3
     dim       = 512 # channel width of VGG-16 at relu 5-3
 
-    dataset = ImageDataset(args.name, read_filelist(args.img_list, 1, False))
+    dataset = ImageDataset(args.name, read_azure_filelist(args.img_list, ['rgb']), data_root=args.data_root)
 
     # compute mean/std
 

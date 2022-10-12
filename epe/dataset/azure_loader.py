@@ -174,7 +174,7 @@ class AzureCredentials:
 
         raise RuntimeError('Failed all authentication methods')
 
-def image_match_desired_size(img, width_new, height_new):
+def image_match_desired_size(img, height_new, width_new):
     width, height = img.size
 
     old_aspect = width / height
@@ -218,6 +218,10 @@ class AzureImageLoader:
         for i in range(self.shards):
             self.initialize(i)
         print("Azure Image Loader initialized")
+        
+        logging.getLogger("azure.storage.common.storageclient").setLevel(logging.WARNING)
+        logging.getLogger('azure.core.pipeline.policies.http_logging_policy').setLevel(logging.WARNING)
+
 
     def initialize(self, i):
         if i >= 0:
@@ -249,7 +253,7 @@ class AzureImageLoader:
         # print('initialized BlobServiceClient: %s'%account_name)
 
     def load_img_from_path(self, path):
-        path = path.split('/')
+        path = str(path).split('/')
         run_id = '/'.join(path[:2])
         camera = path[3]
 
@@ -260,14 +264,16 @@ class AzureImageLoader:
             mode = camera_split[1]
 
         name = path[4]
-        timestamp = int(name.replace('unixus.jpeg', ''))
+        # TODO: use a cleaner way of obtaining the int
+        timestamp = int(name.replace('unixus', '')
+            .replace('.jpeg','').replace('.png', ''))
         output = self.load(run_id, camera, timestamp, mode=mode) 
         return Image.open(output)
             
 
-    def load_img_from_path_and_resize(self, path, width, height):
+    def load_img_from_path_and_resize(self, path, height, width):
         img = self.load_img_from_path(path)
-        return image_match_desired_size(img, width, height)
+        return image_match_desired_size(img, height, width)
 
     def load_sim_img_from_path(self, path):
         blob_client = self.sim_service.get_blob_client(path)
@@ -289,7 +295,6 @@ class AzureImageLoader:
             shard_index = -2
             ext_map = {'rgb': 'jpeg', 'segmentation': 'png', 'depth': 'png'}
             blob_name = f'{run_id}/cameras/{camera}--{mode}/{timestamp:012d}unixus.{ext_map[mode]}'
-            print(blob_name)
             blob_client = self.sim_service.get_blob_client('images', blob_name)
         elif hot:
             timestamp_sec = int(timestamp / 1e6)
@@ -310,7 +315,6 @@ class AzureImageLoader:
             else:
                 raise NotImplementedError(mode)
             
-            print(full_name)
 
             blob_client = self.hot_services[shard_index].get_blob_client(container, full_name)
         else:

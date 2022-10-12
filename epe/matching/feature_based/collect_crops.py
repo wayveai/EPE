@@ -5,9 +5,10 @@ import numpy as np
 import torch
 import torch.utils.data
 from tqdm import tqdm
+import torchvision
 
 from epe.dataset import ImageBatch, ImageDataset
-from epe.dataset.utils import read_filelist
+from epe.dataset.utils import read_filelist, read_azure_filelist
 from epe.network import VGG16
 
 
@@ -26,6 +27,7 @@ if __name__ == '__main__':
     parser.add_argument('-n', '--num_loaders', type=int, default=1)
     parser.add_argument('-c', '--num_crops', type=int, help="Number of crops to sample per image. Default = 15.", default=15)
     parser.add_argument('--out_dir', type=Path, help="Where to store the crop info.", default='.')
+    parser.add_argument('--data_root', type=Path, help="Where to find local images", default='')
     args = parser.parse_args()
 
     network   = VGG16(False, padding='none').to(device)
@@ -34,7 +36,7 @@ if __name__ == '__main__':
     dim       = 512 # channel width of VGG-16 at relu 5-3
     num_crops = args.num_crops
 
-    dataset = ImageDataset(args.name, read_filelist(args.img_list, 1, False))
+    dataset = ImageDataset(args.name, read_azure_filelist(args.img_list, ['rgb']), data_root=args.data_root)
     
     # compute mean/std
 
@@ -45,7 +47,7 @@ if __name__ == '__main__':
     print('Computing mean/std...')
 
     m, s = [], []
-    for i, batch in tqdm(zip(range(1000), loader)):
+    for i, batch in tqdm(zip(range(1000), loader), total=min(len(loader), 1000)):
         m.append(batch.img.mean(dim=(2,3)))
         s.append(batch.img.std(dim=(2,3)))
         pass
@@ -57,7 +59,8 @@ if __name__ == '__main__':
     
     loader  = torch.utils.data.DataLoader(dataset, \
         batch_size=1, shuffle=False, \
-        num_workers=args.num_loaders, pin_memory=True, drop_last=False, worker_init_fn=seed_worker, collate_fn=ImageBatch.collate_fn)
+        num_workers=args.num_loaders, pin_memory=True, drop_last=False,
+        worker_init_fn=seed_worker, collate_fn=ImageBatch.collate_fn)
 
     features = np.zeros((len(dataset) * num_crops, dim), np.float16)
 
