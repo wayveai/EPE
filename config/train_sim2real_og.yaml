@@ -24,6 +24,7 @@ test:
 real_dataset:
   name: real
   filelist: /home/kacper/data/EPE/somers_town/real_files.csv # file with run_id and timestamp pairs
+  data_root: '/home/kacper/data/datasets'
 
 fake_dataset:
   name: sim
@@ -33,6 +34,8 @@ fake_dataset:
   train_filelist: /home/kacper/data/EPE/somers_town/sim_files.csv # file with run_id and timestamp pairs
   val_filelist: /home/kacper/data/EPE/somers_town/sim_files.csv # file with run_id and timestamp pairs
   test_filelist: /home/kacper/data/EPE/somers_town/sim_files.csv # file with run_id and timestamp pairs
+
+  data_root: '/home/kacper/data/datasets'
 
   sampling: 
     type: 'matching'

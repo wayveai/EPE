@@ -8,7 +8,13 @@ import numpy as np
 from scipy.io import savemat
 import torch
 from torch import autograd
+from torchvision.utils import make_grid
 import yaml
+from tqdm import tqdm
+
+import gc
+import wandb
+import re
 
 
 def seed_worker(id):
@@ -257,6 +263,9 @@ class LogSync:
 			self._log.info(''.join(line))			
 			pass
 
+def log_name_extractor(log_name):
+	return re.search('[A-Za-z_\-]*', log_name)[0]
+
 
 class BaseExperiment:
 	""" Provide scaffold for common operations in an experiment.
@@ -278,13 +287,13 @@ class BaseExperiment:
 		self.no_safe_exit = args.no_safe_exit
 		self.collate_fn_train = None
 		self.collate_fn_val   = None
+		self.loader_fake = None
 
 		self.device = torch.device(f'cuda:{args.gpu}' if args.gpu >= 0 else 'cpu')
 
 		self._load_config(args.config)
 		self._parse_config()
 
-		self._log_sync    = LogSync(self._log, self._log_interval)
 
 		self._save_id = 0
 		self._init_directories()
@@ -478,11 +487,12 @@ class BaseExperiment:
 
 
 	def validate(self):
-		if len(self.dataset_fake_val) > 0:
+		counter = 0
+		max_counter = 4	
+		grids = []
+
+		if len(self.dataset_fake) > 0 or True:
 			torch.cuda.empty_cache()
-			loader_fake = torch.utils.data.DataLoader(self.dataset_fake_val, \
-				batch_size=1, shuffle=False, \
-				num_workers=self.num_loaders, pin_memory=True, drop_last=False, collate_fn=self.collate_fn_val, worker_init_fn=seed_worker)
 
 			self.network.eval()
 
@@ -490,22 +500,32 @@ class BaseExperiment:
 			toggle_grad(self.network.discriminator, False)
 
 			with torch.no_grad():
-				for bi, batch_fake in enumerate(loader_fake):
+				for bi, batch_fake in enumerate(self.loader):
 					# last item of batch_fake is just index
 					
 					gen_vars = self._forward_generator_fake(batch_fake.to(self.device), i)
+					if bi < max_counter:
+						grid = None
+						fake = batch_fake.img.detach()
+						rec_fake, fake = gen_vars
+						grid = make_grid(fake, rec_fake, nrow=2)
+						grids.append(grid)
+
 					del batch_fake
-					self.dump_val(i, bi, gen_vars)
+					# self.dump_val(i, bi, gen_vars)
 					del gen_vars
 					pass
 				pass
+
+			grids = make_grid(grids, nrow=1)
+			grids = wandb.Image(grids)
+			wandb.log({'valid/sim, sim2real': grids}, step=self.i)
 
 			self.network.train()
 
 			toggle_grad(self.network.generator, False)
 			toggle_grad(self.network.discriminator, True)
 
-			del loader_fake			
 			#del gen_vars
 			torch.cuda.empty_cache()
 			pass
@@ -519,7 +539,7 @@ class BaseExperiment:
 
 		self.loader = torch.utils.data.DataLoader(self.dataset_train, \
 			batch_size=self.batch_size, shuffle=self.shuffle_train, \
-			num_workers=self.num_loaders, pin_memory=(not self.unpin), drop_last=True, collate_fn=self.collate_fn_train, worker_init_fn=seed_worker)
+			num_workers=self.num_loaders, pin_memory=(not self.unpin), drop_last=True, collate_fn=self.collate_fn_train, worker_init_fn=seed_worker, prefetch_factor=3)
 
 		if self.weight_init is not None:
 			self._load_model()
@@ -531,16 +551,13 @@ class BaseExperiment:
 
 		
 		try:
-			# with torch.profiler.profile(
-			# 	activities=[torch.profiler.ProfilerActivity.CPU,torch.profiler.ProfilerActivity.CUDA],
-   #      		schedule=self._profiler_schedule(),
-   #      		on_trace_ready=torch.profiler.tensorboard_trace_handler(self._profile_path),
-   #      		record_shapes=False,
-   #      		profile_memory=self._profile_memory,
-   #      		with_stack=True) as self._profiler:
-			# with torch.autograd.profiler.profile(enabled=self._profile, use_cuda=self._profile_gpu, profile_memory=self._profile_memory, with_stack=self._profile_stack) as prof:		
 			while not self._should_stop(e, self.i):
-				for batch in self.loader:
+				for batch in tqdm(self.loader, total=None):
+					gc.collect()
+					torch.cuda.empty_cache()
+
+
+
 					if self._should_stop(e, self.i):
 						break
 
@@ -549,13 +566,69 @@ class BaseExperiment:
 						self._log.debug(f'GPU memory allocated: {torch.cuda.memory_allocated(device=self.device)}')
 						pass
 					
-					self._log_sync.update(self.i, log_scalar)
+
+					# Log weigshts and gradient norms
+					log = {}
+					max_weight = 0
+					max_grad = 0
+					norm_table = wandb.Table(columns=['weight_name', 'max weight', 'grad_name', 'max_grad'])
+					for name, param in self.network.named_parameters():
+						weight = torch.norm(param.detach().data, float('inf')).item()
+
+						if weight > max_weight:
+							max_weight = weight
+							log['norms/max_weight'] = max_weight
+
+							if max_weight > abs_max_weight:
+								abs_max_weight_name = name
+								abs_max_weight = max_weight
+
+
+						if param.grad is not None:
+							grad = torch.norm(param.grad.detach().data, float('inf')).item()
+							if grad > max_grad:
+								max_grad = grad
+								log['norms/max_grad'] = max_grad
+								if max_grad > abs_max_grad:
+									abs_max_grad_name = name
+									abs_max_grad = max_grad
+
+
+					norm_table.add_data(abs_max_weight_name, abs_max_weight, abs_max_grad_name, abs_max_grad)
+					log['norms/max_norms'] = norm_table
+
+
+					if len(log) > 0:
+						wandb.log(log, step=self.i)
+					
+					# self._log_sync.update(self.i, log_scalar)
+
+					# Generator Logs
+					log = {}
+					if self.i % 2 == 0:
+						log = {f'train/generator/{log_name_extractor(k)}/' + k:v.to('cpu') for k,v in log_scalar.items()}
+					# Discriminator Logs
+					elif self.i % 2 == 1:
+						log = {f'train/discriminator/{log_name_extractor(k)}/' + k:v.to('cpu') for k,v in log_scalar.items()}
+
+
+					if self.i % self.val_interval == 0:
+						if len(log_img) == 3:
+							# Take iamges off of cuda
+							# should be the same as batch size?
+							range_min = min(log_img['fake'].shape[0], log_img['rec_fake'].shape[0], log_img['real'].shape[0])
+							grid = None
+							for i in range(range_min):
+								grid = make_grid([log_img['fake'][i], log_img['rec_fake'][i], log_img['real'][i]], nrow=3)
+								grid = wandb.Image(grid)
+							# print('logging image')
+							log['train/sim, sim2real, real'] = grid
+
+					wandb.log(log, step=self.i)
 
 					self._dump({**log_img}, force=self._log.isEnabledFor(logging.DEBUG))
 					del log_img
 					del batch
-					
-					self._log_sync.print(self.i)
 					
 
 					if self._should_save_iteration(self.i):
@@ -629,6 +702,7 @@ class BaseExperiment:
 		parser.add_argument('--log_dir', type=Path, default='./log/', help='Directory for log files.')
 		parser.add_argument('--gpu', type=int, default=0, help='ID of GPU. Use -1 to run on CPU. Default: 0')
 		parser.add_argument('--no_safe_exit', action='store_true', default=False, help='Do not save model if anything breaks.')
+		parser.add_argument('--notes', type=str, default='')
 		pass
 
 	

@@ -23,6 +23,14 @@ import epe.dataset as ds
 import epe.network as nw
 import epe.experiment as ee
 from epe.matching import MatchedCrops, IndependentCrops
+import os
+
+# For debugging
+# TODO: turn off for faster training?
+torch.autograd.set_detect_anomaly(True)
+
+import wandb
+
 
 torch.backends.cudnn.enabled = True
 torch.backends.cudnn.benchmark = True
@@ -82,20 +90,32 @@ class PassthruGenerator(torch.nn.Module):
 		pass
 
 	def forward(self, epe_batch):
-		return self.network(epe_batch)
+		# Double check if necessary but it seems like it is since the outputs don't match the range of real
+		return torch.sigmoid(self.network(epe_batch))
+		# return self.network(epe_batch)
 
 
 class EPEExperiment(ee.GANExperiment):
 	def __init__(self, args):
+		# os.environ['WANDB_DISABLED'] = 'true'
+		# wandb.init(project='EPE', mode="disabled")
+
+		# tags = ['debug']
+		tags = ['somers_town']
+		wandb.init(project='EPE', tags=tags, notes=args.notes, entity='wayve-ai')
+
 		super(EPEExperiment, self).__init__(args)
 		self.collate_fn_train = ds.JointEPEBatch.collate_fn
 		self.collate_fn_val   = ds.EPEBatch.collate_fn
+
+
 		pass
 
 
 	def _parse_config(self):
 		super()._parse_config()
 
+		wandb.config.update(self.cfg)
 		# fake dataset
 
 		fake_cfg = dict(self.cfg.get('fake_dataset', {}))
@@ -147,22 +167,18 @@ class EPEExperiment(ee.GANExperiment):
 	def _init_dataset(self):
 
 		self._log.debug('Initializing datasets ...')
-
-		# validation
-		if self.no_validation:
-			self.dataset_fake_val = None
-		elif self.action == 'test':
-			self.dataset_fake_val = fake_datasets[self.fake_name](ds.utils.read_filelist(self.fake_test_path, 4, True))
-		else:
-			self.dataset_fake_val = fake_datasets[self.fake_name](ds.utils.read_filelist(self.fake_val_path, 4, True))
-			pass
+		g_buffers = wandb.config['fake_dataset']['g_buffers']
+		sim_data_modes = ['rgb', 'segmentation', 'seg_robust', *g_buffers]
+		real_data_modes = ['rgb', 'seg_robust']
+		real_data_root = wandb.config['real_dataset']['data_root']
+		sim_data_root = wandb.config['fake_dataset']['data_root']
 
 		# training
-
 		if self.action == 'train':
 
-			source_dataset = fake_datasets[self.fake_name](ds.utils.read_filelist(self.fake_train_path, 4, True))
-			target_dataset = ds.RobustlyLabeledDataset(self.real_name, ds.utils.read_filelist(self.real_basepath, 2, True))
+			source_dataset = fake_datasets[self.fake_name](ds.utils.read_azure_filelist(self.fake_train_path, sim_data_modes), data_root=sim_data_root, gbuffers=g_buffers)
+			self.dataset_fake = source_dataset
+			target_dataset = ds.RobustlyLabeledDataset(self.real_name, ds.utils.read_azure_filelist(self.real_basepath, real_data_modes), data_root=real_data_root)
 
 			if self.sampling == 'matching':
 				self.dataset_train = MatchedCrops(source_dataset, target_dataset, self.sample_cfg)
@@ -175,6 +191,19 @@ class EPEExperiment(ee.GANExperiment):
 		else:
 			self.dataset_train = None
 		pass
+
+		# validation
+		if self.no_validation:
+			self.dataset_fake_val = None
+		elif self.action == 'test':
+			self.dataset_fake_val = fake_datasets[self.fake_name](ds.utils.read_azure_filelist(self.fake_test_path,
+			sim_data_modes), data_root=sim_data_root, gbuffers=g_buffers, mean=self.dataset_fake.gbuf_mean, std=self.dataset_fake.gbuf_std)
+		else:
+			self.dataset_fake_val = fake_datasets[self.fake_name](ds.utils.read_azure_filelist(self.fake_val_path,
+			sim_data_modes), data_root=sim_data_root, gbuffers=g_buffers,
+			mean=self.dataset_fake.gbuf_mean, std=self.dataset_fake.gbuf_std)
+			pass
+
 
 
 	def _init_network(self):
@@ -205,7 +234,7 @@ class EPEExperiment(ee.GANExperiment):
 			generator = nw.ResidualGenerator(nw.make_ienet(self.gen_cfg))
 			pass
 		elif generator_type == 'hr_new':
-			generator = PassthruGenerator(nw.make_ienet2(self.gen_cfg))
+			generator = nw.ResidualGenerator(nw.make_ienet2(self.gen_cfg))
 			pass
 
 		discriminator = {\
@@ -221,7 +250,6 @@ class EPEExperiment(ee.GANExperiment):
 		self._log.debug(f'  target                 : {backprop_target}')
 
 		self._log.debug('Networks are initialized.')
-		self._log.info(f'{self.network}')
 		pass
 
 
@@ -260,6 +288,10 @@ class EPEExperiment(ee.GANExperiment):
 
 		# sample probability of running certain discriminator
 		if self.adaptive_backprop is not None:
+			log = {}
+			for i, p in enumerate(self.adaptive_backprop.p):
+				log[f'adaptive discriminator backprop probability/disc {i}'] = p
+			wandb.log(log, step=self.i)
 			run_discs = self.adaptive_backprop.sample()
 		else:
 			run_discs = [True] * len(self.network.discriminator)

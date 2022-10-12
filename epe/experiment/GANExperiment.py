@@ -1,3 +1,5 @@
+from random import shuffle
+from shutil import register_archive_format
 import time
 import logging
 from pathlib import Path
@@ -7,6 +9,9 @@ import torch
 from torch import autograd
 
 from .BaseExperiment import BaseExperiment, NetworkState, toggle_grad, seed_worker
+
+from torchvision.utils import make_grid
+import wandb
 
 class GANExperiment(BaseExperiment):
 	actions  = ['train', 'test', 'infer']
@@ -157,12 +162,17 @@ class GANExperiment(BaseExperiment):
 
 
 	def validate(self):
-		if not self.no_validation and len(self.dataset_fake_val) > 0:
+		max_counter = 4	
+		grids = []
+		realism_maps_grids = []
+
+		if not self.no_validation and len(self.dataset_fake_val) > 0 or True:
 
 			torch.cuda.empty_cache()
-			loader_fake = torch.utils.data.DataLoader(self.dataset_fake_val, \
-				batch_size=1, shuffle=False, \
-				num_workers=self.num_loaders, pin_memory=True, drop_last=False, collate_fn=self.collate_fn_val, worker_init_fn=seed_worker)
+			if not self.loader_fake:
+				self.loader_fake = torch.utils.data.DataLoader(self.dataset_fake_val, \
+					batch_size=1, shuffle=True, \
+					num_workers=max_counter, pin_memory=True, drop_last=False, collate_fn=self.collate_fn_val, worker_init_fn=seed_worker)
 
 			self.network.eval()
 
@@ -170,9 +180,30 @@ class GANExperiment(BaseExperiment):
 			toggle_grad(self.network.discriminator, False)
 
 			with torch.no_grad():
-				for bi, batch_fake in enumerate(loader_fake):
+				for bi, batch_fake in enumerate(self.loader_fake):
 					
 					gen_vars = self._forward_generator_fake(batch_fake.to(self.device))
+					if bi < max_counter:
+						grid = None
+						fake = batch_fake.img.detach()
+						rec_fake = gen_vars['rec_fake'][0].detach()
+						fake = gen_vars['fake'][0].detach()
+						grid = make_grid([fake, rec_fake], 2)
+						grids.append(grid)
+
+						# run discriminators
+						run_discs = [True] * len(self.network.discriminator)
+						realism_maps = self.network.discriminator.forward(\
+							vgg=self.vgg, img=rec_fake, robust_labels=batch_fake.robust_labels.to(self.device), 
+							fix_input=True, run_discs=run_discs)
+						realism_maps = [torch.squeeze(x, 0) for x in realism_maps]
+						realism_maps = make_grid(realism_maps, 5)
+						realism_maps_grids.append(realism_maps)
+						pass
+
+					else:
+						break
+
 					del batch_fake
 					
 					self.dump_val(self.i, bi, gen_vars)
@@ -180,12 +211,19 @@ class GANExperiment(BaseExperiment):
 					pass
 				pass
 
+			grids = make_grid(grids, nrow=1)
+			grids = wandb.Image(grids)
+			wandb.log({'valid/images': grids}, step=self.i)
+			
+			realism_maps_grids = make_grid(realism_maps_grids, 1, padding=5)
+			realism_maps_grids = wandb.Image(realism_maps_grids)
+			wandb.log({'valid/realism maps': realism_maps_grids})
+
 			self.network.train()
 
 			toggle_grad(self.network.generator, False)
 			toggle_grad(self.network.discriminator, True)
 
-			del loader_fake			
 			#del gen_vars
 			torch.cuda.empty_cache()
 			pass
@@ -198,7 +236,7 @@ class GANExperiment(BaseExperiment):
 		"""Test a network on a dataset."""
 		self.loader_fake = torch.utils.data.DataLoader(self.dataset_fake_val, \
 			batch_size=1, shuffle=(self.shuffle_test), \
-			num_workers=self.num_loaders, pin_memory=True, drop_last=False, collate_fn=self.collate_fn_val, worker_init_fn=seed_worker)
+			num_workers=self.num_loaders, pin_memory=True, drop_last=False, collate_fn=self.collate_fn_val, worker_init_fn=seed_worker, prefetch_factor=6)
 
 		if self.weight_init:
 			self._load_model()
