@@ -41,7 +41,7 @@ class VGG16(torch.nn.Module):
 		self.std[0,1,0,0] = 0.224
 		self.std[0,2,0,0] = 0.225
 
-		pretrained_vgg = models.vgg16(pretrained=True)
+		pretrained_vgg = models.vgg16(weights=models.VGG16_Weights)
 		features = pretrained_vgg.features
 		classifier = pretrained_vgg.classifier
 
