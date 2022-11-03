@@ -25,9 +25,6 @@ import epe.experiment as ee
 from epe.matching import MatchedCrops, IndependentCrops
 import os
 
-# For debugging
-# TODO: turn off for faster training?
-torch.autograd.set_detect_anomaly(True)
 
 import wandb
 
@@ -97,12 +94,12 @@ class PassthruGenerator(torch.nn.Module):
 
 class EPEExperiment(ee.GANExperiment):
 	def __init__(self, args):
-		# os.environ['WANDB_DISABLED'] = 'true'
-		# wandb.init(project='EPE', mode="disabled")
-
-		# tags = ['debug']
-		tags = ['somers_town']
-		wandb.init(project='EPE', tags=tags, notes=args.notes, entity='wayve-ai')
+		if args.disabled:
+			os.environ['WANDB_DISABLED'] = 'true'
+			self.wandb_run = wandb.init(project='EPE', mode="disabled")
+		else:
+			tags = ['weather_somers_town_v1']
+			self.wandb_run = wandb.init(project='EPE', tags=tags, notes=args.notes, entity='wayve-ai')
 
 		super(EPEExperiment, self).__init__(args)
 		self.collate_fn_train = ds.JointEPEBatch.collate_fn
@@ -122,9 +119,6 @@ class EPEExperiment(ee.GANExperiment):
 		self.fake_name       = str(fake_cfg.get('name'))
 		self.fake_train_path = Path(fake_cfg.get('train_filelist', None))
 		self.fake_val_path   = Path(fake_cfg.get('val_filelist', None))
-		self.fake_test_path  = Path(fake_cfg.get('test_filelist', None))
-
-		self._log.debug(f'  Fake dataset {self.fake_name} in {self.fake_train_path}[train], {self.fake_val_path}[val], {self.fake_test_path}[test].')
 
 		# real dataset
 
@@ -168,15 +162,20 @@ class EPEExperiment(ee.GANExperiment):
 
 		self._log.debug('Initializing datasets ...')
 		g_buffers = wandb.config['fake_dataset']['g_buffers']
-		sim_data_modes = ['rgb', 'segmentation', 'seg_robust', *g_buffers]
-		real_data_modes = ['rgb', 'seg_robust']
+		sim_data_modes = ['rgb', 'segmentation', 'segmentation-mseg', *g_buffers]
+		real_data_modes = ['rgb', 'segmentation-mseg']
 		real_data_root = wandb.config['real_dataset']['data_root']
 		sim_data_root = wandb.config['fake_dataset']['data_root']
+		gbuf_stats_path = wandb.config['fake_dataset']['gbuf_stats_path']
+		gbuf_stats = torch.load(gbuf_stats_path)
+
+		wandb.config.update({'fake_dataset': {'gbuf_mean': gbuf_stats['gbuf_mean'].tolist(),
+										'gbuf_std': gbuf_stats['gbuf_std'].tolist()}}, allow_val_change=True)
 
 		# training
 		if self.action == 'train':
-
-			source_dataset = fake_datasets[self.fake_name](ds.utils.read_azure_filelist(self.fake_train_path, sim_data_modes), data_root=sim_data_root, gbuffers=g_buffers)
+			source_dataset = fake_datasets[self.fake_name](ds.utils.read_azure_filelist(self.fake_train_path,
+							sim_data_modes), data_root=sim_data_root, gbuffers=g_buffers, gbuf_mean=gbuf_stats['gbuf_mean'], gbuf_std=gbuf_stats['gbuf_std'])
 			self.dataset_fake = source_dataset
 			target_dataset = ds.RobustlyLabeledDataset(self.real_name, ds.utils.read_azure_filelist(self.real_basepath, real_data_modes), data_root=real_data_root)
 
@@ -196,12 +195,16 @@ class EPEExperiment(ee.GANExperiment):
 		if self.no_validation:
 			self.dataset_fake_val = None
 		elif self.action == 'test':
-			self.dataset_fake_val = fake_datasets[self.fake_name](ds.utils.read_azure_filelist(self.fake_test_path,
-			sim_data_modes), data_root=sim_data_root, gbuffers=g_buffers, mean=self.dataset_fake.gbuf_mean, std=self.dataset_fake.gbuf_std)
+			# TODO: add dataset mean and std 
+			self.dataset_fake_val = \
+			fake_datasets[self.fake_name](ds.utils.read_azure_filelist(self.fake_test_path,
+				sim_data_modes), data_root=sim_data_root, gbuffers=g_buffers,
+				gbuf_mean=self.wandb_run.config['fake_dataset']['gbuf_mean'],
+				gbuf_std=self.wandb_run.config['fake_dataset']['gbuf_std'])
 		else:
-			self.dataset_fake_val = fake_datasets[self.fake_name](ds.utils.read_azure_filelist(self.fake_val_path,
-			sim_data_modes), data_root=sim_data_root, gbuffers=g_buffers,
-			mean=self.dataset_fake.gbuf_mean, std=self.dataset_fake.gbuf_std)
+			self.dataset_fake_val = fake_datasets[self.fake_name](ds.utils.read_azure_filelist(self.fake_val_path, sim_data_modes),
+				data_root=sim_data_root, gbuffers=g_buffers,
+				gbuf_mean=gbuf_stats['gbuf_mean'], gbuf_std=gbuf_stats['gbuf_std'])
 			pass
 
 
