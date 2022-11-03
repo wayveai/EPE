@@ -1,16 +1,11 @@
-from random import shuffle
-from shutil import register_archive_format
-import time
-import logging
-from pathlib import Path
+# %%
+import os 
 
-from scipy.io import savemat
 import torch
-from torch import autograd
 
 from .BaseExperiment import BaseExperiment, NetworkState, toggle_grad, seed_worker
 
-from torchvision.utils import make_grid
+from torchvision.utils import make_grid, save_image
 import wandb
 
 class GANExperiment(BaseExperiment):
@@ -122,7 +117,9 @@ class GANExperiment(BaseExperiment):
 		suffix = f'-e{epochs}{suffix}' if epochs is not None else suffix
 		suffix = f'-{iterations}{suffix}' if iterations is not None else suffix
 
-		base_filename = self.weight_dir / f'{self.weight_save}{suffix}'
+		base_dir = self.weight_dir / self.weight_save
+		os.makedirs(str(base_dir), exist_ok=True)
+		base_filename = base_dir / f'{suffix[1:]}'
 		self._log.info(f'Saving model to {base_filename}.')
 
 		sd, od = self.gen_state.save_to_dict()
