@@ -41,7 +41,7 @@ class RobustlyLabeledDataset(ImageDataset):
 			pass
 
 		self.paths           = sorted(self._img2label.keys())
-		self._path2id        = {p.stem:i for i,p in enumerate(self.paths)}
+		self._path2id        = {str(p):i for i,p in enumerate(self.paths)}
 		self.transform       = img_transform
 		self.label_transform = label_transform
 		self.name            = name
@@ -55,7 +55,7 @@ class RobustlyLabeledDataset(ImageDataset):
 
 	def get_id(self, img_filename):
 		""" Get dataset ID for sample given img_filename."""
-		return self._path2id.get(Path(img_filename).stem)
+		return self._path2id.get(img_filename)
 
 
 	def __getitem__(self, index):
