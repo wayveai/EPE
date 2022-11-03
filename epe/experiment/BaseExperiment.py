@@ -310,12 +310,8 @@ class BaseExperiment:
 	def _load_config(self, config_path):
 		with open(config_path) as file:
 			self.cfg = yaml.safe_load(file)
-			pass
-		pass
-
 
 	def _parse_config(self):
-
 		common_cfg = dict(self.cfg.get('common', {}))
 		self.unpin           = bool(common_cfg.get('unpin', False))
 		self.seed            = common_cfg.get('seed', None)
@@ -354,7 +350,7 @@ class BaseExperiment:
 		self.max_iterations  = int(train_cfg.get('max_iterations', -1))		
 		self.save_epochs     = int(train_cfg.get('save_epochs', -1))
 		self.save_iterations = int(train_cfg.get('save_iterations', 100000))
-		self.weight_save     = str(train_cfg.get('name_save', 'model'))
+		self.weight_save     = self.wandb_run.name
 		self.no_validation   = bool(train_cfg.get('no_validation', False))
 		self.val_interval    = int(train_cfg.get('val_interval', 20000))
 
@@ -552,6 +548,8 @@ class BaseExperiment:
 		
 		try:
 			while not self._should_stop(e, self.i):
+				NUM_PROGRESS_GRIDS = 4
+				img_progress_grids = [None] * NUM_PROGRESS_GRIDS
 				for batch in tqdm(self.loader, total=None):
 					gc.collect()
 					torch.cuda.empty_cache()
@@ -569,33 +567,6 @@ class BaseExperiment:
 
 					# Log weigshts and gradient norms
 					log = {}
-					max_weight = 0
-					max_grad = 0
-					norm_table = wandb.Table(columns=['weight_name', 'max weight', 'grad_name', 'max_grad'])
-					for name, param in self.network.named_parameters():
-						weight = torch.norm(param.detach().data, float('inf')).item()
-
-						if weight > max_weight:
-							max_weight = weight
-							log['norms/max_weight'] = max_weight
-
-							if max_weight > abs_max_weight:
-								abs_max_weight_name = name
-								abs_max_weight = max_weight
-
-
-						if param.grad is not None:
-							grad = torch.norm(param.grad.detach().data, float('inf')).item()
-							if grad > max_grad:
-								max_grad = grad
-								log['norms/max_grad'] = max_grad
-								if max_grad > abs_max_grad:
-									abs_max_grad_name = name
-									abs_max_grad = max_grad
-
-
-					norm_table.add_data(abs_max_weight_name, abs_max_weight, abs_max_grad_name, abs_max_grad)
-					log['norms/max_norms'] = norm_table
 
 
 					if len(log) > 0:
@@ -612,16 +583,19 @@ class BaseExperiment:
 						log = {f'train/discriminator/{log_name_extractor(k)}/' + k:v.to('cpu') for k,v in log_scalar.items()}
 
 
-					if self.i % self.val_interval == 0:
-						if len(log_img) == 3:
-							# Take iamges off of cuda
+					mod_index = ((self.i // 2) + NUM_PROGRESS_GRIDS - 1) % (self.val_interval // 2)
+					if mod_index in range(NUM_PROGRESS_GRIDS) and self.i > 0:
+						if len(log_img) == 3: # Take iamges off of cuda
 							# should be the same as batch size?
 							range_min = min(log_img['fake'].shape[0], log_img['rec_fake'].shape[0], log_img['real'].shape[0])
 							grid = None
 							for i in range(range_min):
-								grid = make_grid([log_img['fake'][i], log_img['rec_fake'][i], log_img['real'][i]], nrow=3)
-								grid = wandb.Image(grid)
-							# print('logging image')
+								grid = make_grid([log_img['fake'][i], log_img['rec_fake'][i], log_img['real'][i]], nrow=3).cpu()
+								img_progress_grids[mod_index] = grid
+
+						if self.i % self.val_interval == 0 and all([x is not None for x in img_progress_grids]):
+							grid = make_grid(img_progress_grids, nrow=1)
+							grid = wandb.Image(grid)
 							log['train/sim, sim2real, real'] = grid
 
 					wandb.log(log, step=self.i)
@@ -703,6 +677,7 @@ class BaseExperiment:
 		parser.add_argument('--gpu', type=int, default=0, help='ID of GPU. Use -1 to run on CPU. Default: 0')
 		parser.add_argument('--no_safe_exit', action='store_true', default=False, help='Do not save model if anything breaks.')
 		parser.add_argument('--notes', type=str, default='')
+		parser.add_argument('--disabled', default=False, action='store_true')
 		pass
 
 	
