@@ -9,7 +9,6 @@ import torch
 from epe.dataset.azure_loader import AzureImageLoader
 import os
 import random
-import wandb
 from tqdm import tqdm
 from torchvision.transforms import Resize
 
@@ -47,7 +46,9 @@ def material_from_gt_label(gt_labelmap):
 
 
 class SimDataset(SyntheticDataset):
-	def __init__(self, paths, transform=None, gbuffers='fake', data_root='', shape=(600, 960), mean=None, std=None):
+	def __init__(self, paths, transform=None, gbuffers='fake', data_root='', shape=(600, 960), inference=False,
+				gbuf_mean=None,
+				gbuf_std=None):
 		"""
 
 
@@ -63,11 +64,12 @@ class SimDataset(SyntheticDataset):
 		self.gbuffers  = gbuffers
 		self.data_root = data_root
 		self.shape = shape
+		self.inference = inference
 
 		# self.shader    = class_type
 
 		self._paths    = paths
-		self._path2id  = {Path(p[0]).stem:i for i,p in enumerate(self._paths)}
+		self._path2id  = {p[0]:i for i,p in enumerate(self._paths)}
 		if self._log.isEnabledFor(logging.DEBUG):
 			self._log.debug(f'Mapping paths to dataset IDs (showing first 30 entries):')
 			for i,(k,v) in zip(range(30),self._path2id.items()):
@@ -81,10 +83,8 @@ class SimDataset(SyntheticDataset):
 
 		self.resize = Resize(self.shape)
 
-		self.gbuf_mean = mean
-		self.gbuf_std  = std
-		if mean is None or std is None:
-			self.compute_gbuffer_statistics()
+		self.gbuf_mean = gbuf_mean
+		self.gbuf_std = gbuf_std
 
 
 
@@ -117,34 +117,9 @@ class SimDataset(SyntheticDataset):
 		else:
 			return {}
 
-	def compute_gbuffer_statistics(self):
-		indices = list(range(self.__len__()))
-		random.shuffle(indices)
-		acc_std = 0
-		acc_mean = 0
-		counter = 0
-
-		print('Computing gbuffer statistics...')
-		for i in tqdm(indices[:1000]):
-			batch = self[i]
-			gbuffers = batch.gbuffers
-			std, mean = torch.std_mean(gbuffers, (0, 2, 3))
-			acc_std += std
-			acc_mean += mean
-			counter += 1
-
-		self.gbuf_mean = acc_mean / counter
-		self.gbuf_std  = acc_std / counter
-
-		data = zip(self.gbuf_mean.tolist(), self.gbuf_std.tolist())
-		data = list(data)
-		table = wandb.Table(columns=["mean", "std"], data=data)
-		wandb.log({'mean_std': table})
-
-
 
 	def get_id(self, img_filename):
-		return self._path2id.get(Path(img_filename).stem)
+		return self._path2id.get(img_filename)
 
 	def load_file(self, path):
 		local_path = os.path.join(self.data_root, path)
@@ -165,9 +140,13 @@ class SimDataset(SyntheticDataset):
 		# TODO: check if either local or azure file exists, else skip
 
 		index  = index % self.__len__()
-		img_path, gt_label_path, robust_label_path = self._paths[index][:3]
-		g_buffer_paths = self._paths[index][3:]
-
+		if self.inference:
+			# for inference we only need rgb and g-buffers
+			img_path, gt_label_path = self._paths[index][:2]
+			g_buffer_paths = self._paths[index][2:]
+		else:
+			img_path, gt_label_path, robust_label_path = self._paths[index][:3]
+			g_buffer_paths = self._paths[index][3:]
 
 		g_data = []
 		for g_buffer_path in g_buffer_paths:
@@ -189,18 +168,21 @@ class SimDataset(SyntheticDataset):
 		img = self.resize(img)
 		gbuffers = torch.from_numpy(g_data.astype(np.float32)).float()
 		gt_labels = mat2tensor(material_from_gt_label(self.load_file(gt_label_path)))
-		# gt_labels = mat2tensor(self.load_file(gt_label_path).astype(np.float32))
 
-		if torch.max(gt_labels) > 128:
+		if gt_labels is not None and torch.max(gt_labels) > 128:
 			gt_labels = gt_labels / 255.0
 			pass
+
+		robust_labels = None
+		if not self.inference:
+
+			robust_labels = self.load_file(robust_label_path)
+			robust_labels = torch.LongTensor(robust_labels[:,:]).unsqueeze(0)
 
 		if self.gbuf_mean is not None:
 			gbuffers = center(gbuffers, self.gbuf_mean, self.gbuf_std)
 			pass
 
-		robust_labels = self.load_file(robust_label_path)
-		robust_labels = torch.LongTensor(robust_labels[:,:]).unsqueeze(0)
 
 		return EPEBatch(img, gbuffers=gbuffers, gt_labels=gt_labels, robust_labels=robust_labels, path=img_path, coords=None)
 
