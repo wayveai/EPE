@@ -2,6 +2,7 @@
 import logging
 from operator import contains
 import os
+import re
 from datetime import datetime, timedelta
 from io import BytesIO
 from random import uniform
@@ -177,32 +178,33 @@ class AzureCredentials:
 def image_match_desired_size(img, height_new, width_new):
     width, height = img.size
 
-    old_aspect = width / height
-    new_aspect = width_new / height_new
+    if width != width_new and height != height_new:
+        old_aspect = width / height
+        new_aspect = width_new / height_new
 
-    # rescale on smaller dimension (aspect ratio wise)
-    # then crop excess
-    if new_aspect > old_aspect:
-        scale = width_new / width
-        height = int(scale * height)
-        width = width_new
-    else:
-        scale = height_new / height
-        height = height_new
-        width = int(scale * width)
+        # rescale on smaller dimension (aspect ratio wise)
+        # then crop excess
+        if new_aspect > old_aspect:
+            scale = width_new / width
+            height = int(scale * height)
+            width = width_new
+        else:
+            scale = height_new / height
+            height = height_new
+            width = int(scale * width)
 
-    # resizing to match desired height
-    img = img.resize((width, height))
+        # resizing to match desired height
+        img = img.resize((width, height))
 
-    # cropping to match desired width
-    center_x = width // 2
-    left = center_x - width_new//2
-    right = center_x + width_new//2
+        # cropping to match desired width
+        center_x = width // 2
+        left = center_x - width_new//2
+        right = center_x + width_new//2
 
-    center_y = height // 2
-    top = center_y - height_new//2
-    bottom = center_y + height_new//2
-    img = img.crop((left, top, right, bottom))
+        center_y = height // 2
+        top = center_y - height_new//2
+        bottom = center_y + height_new//2
+        img = img.crop((left, top, right, bottom))
 
     return img
 
@@ -250,29 +252,28 @@ class AzureImageLoader:
             )
         else:
             raise NotImplementedError(str(i))
-        # print('initialized BlobServiceClient: %s'%account_name)
 
-    def load_img_from_path(self, path):
+    def load_img_from_path(self, path, sim2real_storage=True):
         path = str(path).split('/')
         run_id = '/'.join(path[:2])
         camera = path[3]
 
-        mode = 'rgb'
-        if 'ningaloo' in run_id:
+        if '--' in camera:
             camera_split = camera.split('--')
             camera = camera_split[0]
             mode = camera_split[1]
+        else:
+            camera = 'front-forward'
+            mode = 'rgb'
 
         name = path[4]
-        # TODO: use a cleaner way of obtaining the int
-        timestamp = int(name.replace('unixus', '')
-            .replace('.jpeg','').replace('.png', ''))
-        output = self.load(run_id, camera, timestamp, mode=mode) 
+        timestamp = int(re.findall(r'^\d+', name)[0])
+        output = self.load(run_id, camera, timestamp, mode=mode, sim2real_storage=sim2real_storage) 
         return Image.open(output)
             
 
-    def load_img_from_path_and_resize(self, path, height, width):
-        img = self.load_img_from_path(path)
+    def load_img_from_path_and_resize(self, path, height, width, sim2real_storage=True):
+        img = self.load_img_from_path(path, sim2real_storage=sim2real_storage)
         return image_match_desired_size(img, height, width)
 
     def load_sim_img_from_path(self, path):
@@ -289,8 +290,17 @@ class AzureImageLoader:
             print('image not in sim storage: ', path)
             return None
 
-    def load(self, run_id, camera, timestamp, mode='rgb', calibration_hash=None, hot=True, auth_attempts=1) -> BytesIO:
-        if run_id[:8] == 'ningaloo':
+    def load(self, run_id, camera, timestamp, mode='rgb', calibration_hash=None, hot=True, auth_attempts=1, sim2real_storage=True) -> BytesIO:
+        if sim2real_storage:
+            is_sim = 'ningaloo' in run_id
+            hot = False
+            shard_index = -2
+            ext_map = {'rgb': 'jpeg', 'segmentation': 'png', 'segmentation-mseg': 'png', 'depth': 'png', 'normal': 'png'}
+            camera_id = camera if not is_sim and mode == 'rgb' else f'{camera}--{mode}'
+            blob_name = f'{run_id}/cameras/{camera_id}/{timestamp}unixus.{ext_map[mode]}'
+            container = 'sim2real-image-translation'
+            blob_client = self.sim_service.get_blob_client(container, blob_name)
+        elif run_id[:8] == 'ningaloo':
             hot = False
             shard_index = -2
             ext_map = {'rgb': 'jpeg', 'segmentation': 'png', 'depth': 'png'}
@@ -301,17 +311,17 @@ class AzureImageLoader:
             shard_index = timestamp_sec % self.shards
             if mode == 'rgb':
                 container = 'image-cache'
-                full_name = f'jpeg-full_resolution/{run_id}/cameras/{camera}/{timestamp:012d}unixus.jpeg'
+                full_name = f'jpeg-full_resolution/{run_id}/cameras/{camera}/{timestamp}unixus.jpeg'
             elif mode == 'segmentation':
                 # assert calibration_hash is not None
                 container = 'teacher-cache'
-                full_name = f'{TEACHER_SEMSEG}/{run_id}/{camera}/{calibration_hash}/{timestamp:012d}unixus.png'
+                full_name = f'{TEACHER_SEMSEG}/{run_id}/{camera}/{calibration_hash}/{timestamp}unixus.png'
             elif mode == 'depth':
                 container = 'teacher-cache'
-                full_name = f'{TEACHER_DEPTH}/{run_id}/{camera}/{calibration_hash}/{timestamp:012d}unixus.png'
+                full_name = f'{TEACHER_DEPTH}/{run_id}/{camera}/{calibration_hash}/{timestamp}unixus.png'
             elif mode == 'cuboids':
                 container = 'teacher-cache'
-                full_name = f'{TEACHER_CUBOID}/json-1920x1200/{run_id}/cameras/{camera}/{timestamp:012d}unixus.json'
+                full_name = f'{TEACHER_CUBOID}/json-1920x1200/{run_id}/cameras/{camera}/{timestamp}unixus.json'
             else:
                 raise NotImplementedError(mode)
             
@@ -319,15 +329,12 @@ class AzureImageLoader:
             blob_client = self.hot_services[shard_index].get_blob_client(container, full_name)
         else:
             shard_index = -1
-            blob_name = f'{run_id}/cameras/{camera}/{timestamp:012d}unixus.jpeg'
+            blob_name = f'{run_id}/cameras/{camera}/{timestamp}unixus.jpeg'
             blob_client = self.cold_service.get_blob_client('vehicle-data', blob_name)
         try:
             if blob_client.exists():  # TODO: this extra check is a bit slow but prevents a memory leak (when using ddp+workers)
                 data = blob_client.download_blob().readall()
-                if mode in ['rgb', 'segmentation', 'depth']:
-                    output = BytesIO(data)  # this needs to be in try block in case data is corrupted
-                else:
-                    output = BytesIO(data)
+                output = BytesIO(data) # this needs to be in try block in case data is corrupted
             else:
                 raise ResourceNotFoundError
 
@@ -373,7 +380,6 @@ class AzureImageLoader:
         return np.array(timestamps)
 
     def get_image_timestamps(self, runid, camera):
-        # print("getting timestamps")
         return self.get_timestamps(os.path.join(runid, 'cameras', camera))
 
 # %%
