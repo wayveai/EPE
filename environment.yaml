@@ -1,0 +1,78 @@
+name: epe
+channels:
+  - defaults
+  - conda-forge
+  - pytorch
+dependencies:
+  - python=3.8
+  # - cudatoolkit=11.3
+  - scikit-image
+  - faiss-gpu
+  - azure-identity
+  - azure-storage
+  - azure-storage-blob
+  - aiohttp
+  - retry
+  - jedi
+  - nest-asyncio
+  - traitlets
+  - six
+  - _libgcc_mutex
+  - ptyprocess
+  - pure_eval
+  - pip
+  - xz
+  - pexpect
+  - ncurses
+  - entrypoints
+  - packaging
+  - tornado
+  - pygments
+  - certifi
+  - stack_data
+  - ld_impl_linux-64
+  - debugpy
+  - sqlite
+  - libstdcxx-ng
+  - parso
+  - tk
+  - wcwidth
+  - wheel
+  - _openmp_mutex
+  - backcall
+  - pyzmq
+  - libffi
+  - jupyter_client
+  - libsodium
+  - zlib
+  - pyparsing
+  - libgcc-ng
+  - pickleshare
+  - asttokens
+  - decorator
+  - readline
+  - prompt-toolkit
+  - executing
+  - ca-certificates
+  - libgomp
+  - ipython
+  - psutil
+  - python-dateutil
+  - matplotlib-inline
+  - openssl
+  - setuptools
+  - zeromq
+  - jupyter_core
+  - ipykernel
+  - ipywidgets
+  - pyarrow
+  - autopep8
+  - tqdm
+  - imageio
+  - wandb
+  - opencv
+  # - korina
+  # - pip:
+  #   - torch==1.12.1
+    # - torchvision==0.13.1
+prefix: /home/kacper/miniconda3/envs/epe
