@@ -29,9 +29,6 @@ def make_conv_layer(dims, strides=1, leaky_relu=True, spectral=False, norm_facto
 
 	"""
 
-	spectral = False
-	assert not spectral
-
 	if type(strides) == int:
 		strides = [strides] + [1] * (len(dims)-2)
 		pass
