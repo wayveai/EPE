@@ -11,7 +11,7 @@ logger = logging.getLogger('epe.network.gb_encoder')
 _gbuffer_class_encoder_factory = {\
 	'relu':    lambda di,do, s0, s1: nf.make_conv_layer([di,64,do], [s0,s1], False, False, None),
 	'lrelu':   lambda di,do, s0, s1: nf.make_conv_layer([di,64,do], [s0,s1], True,  False, None),
-	'spectral':lambda di,do, s0, s1: nf.make_conv_layer([di,64,do], [s0,s1], True,  False,  None),
+	'spectral':lambda di,do, s0, s1: nf.make_conv_layer([di,64,do], [s0,s1], True,  True,  None),
 	'group':   lambda di,do, s0, s1: nf.make_conv_layer([di,64,do], [s0,s1], True, False,  nf.norm_factory['group']),
 	'batch':   lambda di,do, s0, s1: nf.make_conv_layer([di,64,do], [s0,s1], True,  False, nf.norm_factory['batch']),
 	'domain':  lambda di,do, s0, s1: nf.make_conv_layer([di,64,do], [s0,s1], True,  False, nf.norm_factory['domain']),
@@ -24,7 +24,7 @@ _gbuffer_joint_encoder_factory = {\
 	'relu':    lambda di, do, s: nf.make_conv_layer([di, do, do], s, False, False, None),
 	'lrelu':   lambda di, do, s: nf.make_conv_layer([di, do, do], s, True,  False, None),
 	'brelu':   lambda di, do, s: nf.make_conv_layer([di, do, do], s, False, False, (lambda d:nn.BatchNorm2d(d, track_running_stats=False))),
-	'spectral':lambda di, do, s: nf.make_conv_layer([di, do, do], s, True,  False,  None),
+	'spectral':lambda di, do, s: nf.make_conv_layer([di, do, do], s, True,  True,  None),
 	'group':   lambda di, do, s: nf.make_conv_layer([di, do, do], s, True,  False, (lambda d:nn.GroupNorm(8,d))),
 	'batch':   lambda di, do, s: nf.make_conv_layer([di, do, do], s, True,  False, (lambda d:nn.BatchNorm2d(d, track_running_stats=False))),
 	'domain':  lambda di, do, s: nf.make_conv_layer([di, do, do], s, True,  False, (lambda d:DomainNorm(d))),	
