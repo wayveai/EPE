@@ -45,6 +45,7 @@ class ImageDataset(torch.utils.data.Dataset):
 
 
 	def _load_img(self, path):
+		path = str(path)
 		try:
 			local_path = os.path.join(self.data_root, path)
 			if os.path.exists(local_path):
