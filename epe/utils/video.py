@@ -31,7 +31,7 @@ from epe.matching import MatchedCrops, IndependentCrops
 import os
 from tqdm import tqdm
 
-from epe.dev_utils.dataset_collector import uniform_sampling
+from epe.utils.dataset_collector import uniform_sampling
 
 # For debugging
 # TODO: turn off for faster training?
