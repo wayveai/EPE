@@ -9,3 +9,6 @@ EPE.code-workspace
 launch.json
 
 wandb
+
+datasets
+epe/dev_utils
