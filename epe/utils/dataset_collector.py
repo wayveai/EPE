@@ -76,7 +76,8 @@ def uniform_sampling(files_csv_path, sampling_rate, data_root='/home/kacper/data
                 for run in os.listdir(os.path.join(data_root, car)):
                     camera_path = os.path.join(data_root, car, run, 'cameras', 'front-forward--rgb')
                     if path_filter(camera_path):
-                        for i, img_name in enumerate(os.listdir(camera_path)):
+                        img_names = sorted(os.listdir(camera_path))
+                        for i, img_name in enumerate(img_names):
                             if i % sampling_rate == 0:
                                 run_id = os.path.join(car, run)
                                 timestamp = re.search('\d+', img_name).group()
