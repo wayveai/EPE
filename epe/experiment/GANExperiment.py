@@ -120,14 +120,22 @@ class GANExperiment(BaseExperiment):
 		base_dir = self.weight_dir / self.weight_save
 		os.makedirs(str(base_dir), exist_ok=True)
 		base_filename = base_dir / f'{suffix[1:]}'
-		self._log.info(f'Saving model to {base_filename}.')
+		self._log.info(f'Saving model to {base_filename}')
+
+		latest_gen_network_path = base_dir / 'gen-network.pth.tar'
 
 		sd, od = self.gen_state.save_to_dict()
 		for k,v in sd.items():
 			try:
 				torch.save(v, f'{base_filename}_gen-{k}.pth.tar')
+				if k == 'network':
+					torch.save(v, latest_gen_network_path)
 			except:
 				self._log.error('Cannot store {k}.')
+
+		artifact = wandb.Artifact('model', type='model')
+		artifact.add_file(latest_gen_network_path)
+		self.wandb_run.log_artifact(artifact)
 
 		sd, od = self.disc_state.save_to_dict()
 		for k,v in sd.items():
