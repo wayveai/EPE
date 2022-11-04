@@ -35,12 +35,12 @@ from epe.utils.dataset_collector import uniform_sampling
 
 # For debugging
 # TODO: turn off for faster training?
-torch.autograd.set_detect_anomaly(True)
+# torch.autograd.set_detect_anomaly(True)
 # %%
 import wandb
 api = wandb.Api()
-training_name = 'solar-tree-195'
-iteration = '80000'
+training_name = 'fanciful-plant-218'
+iteration = 'latest'
 runs = api.runs(path="wayve-ai/EPE", filters={"display_name": training_name})
 run = runs[0]
 # %%
@@ -55,7 +55,7 @@ video_test_path = '/home/kacper/data/EPE/somers_town/video_test.csv'
 # sim_somers_town = '/home/kacper/code/EPE/datasets/somers_town/sim_files.csv'
 # sim_car_filter = lambda car: 'ningaloo' in car
 path_filter = lambda x: '2022-10-26--08-48-27--somerstown-aft-loop-anti-clockwise-v1--ccda56d6f883af83--ce9c3840' in x 
-SAMPLING_RATE = 2
+SAMPLING_RATE = 1
 FRAME_RATE = 30 / SAMPLING_RATE
 assert FRAME_RATE.is_integer()
 
@@ -107,7 +107,8 @@ generator.to(device)
 generator.eval()
 toggle_grad(generator, False)
 # %%
-weight_path = f'/home/kacper/data/EPE/datasets/weights/{training_name}/{iteration}_gen-network.pth.tar'
+weights_name = 'gen-network.pth.tar' if iteration == 'latest' else f'{iteration}_gen-network.pth.tar'
+weight_path = f'/home/kacper/data/EPE/weights/{training_name}/{weights_name}'
 generator.load_state_dict(torch.load(weight_path, map_location=device))
 
 
@@ -118,23 +119,23 @@ def _forward_generator_fake(batch_fake):
 	rec_fake = generator(batch_fake)
 	return {'rec_fake':rec_fake.detach(), 'fake':batch_fake.img.detach()}
 
-# with torch.no_grad():
-# 	for bi, batch_fake in enumerate(tqdm(loader_fake)):                
-# 		gen_vars = _forward_generator_fake(batch_fake.to(device))
+with torch.no_grad():
+	for bi, batch_fake in enumerate(tqdm(loader_fake)):                
+		gen_vars = _forward_generator_fake(batch_fake.to(device))
 
-# 		for i in range(len(gen_vars['rec_fake'])):
-# 			rec_fake = gen_vars['rec_fake'][i].detach()
-# 			fake = gen_vars['fake'][i].detach()
+		for i in range(len(gen_vars['rec_fake'])):
+			rec_fake = gen_vars['rec_fake'][i].detach()
+			fake = gen_vars['fake'][i].detach()
 			
-# 			rec_fake = gen_vars['rec_fake'][i].detach()
-# 			save_path = os.path.join(out_dir, training_name, iteration, batch_fake.path[i])
-# 			os.makedirs(os.path.dirname(save_path), exist_ok=True)
-# 			save_image(rec_fake, save_path)
+			rec_fake = gen_vars['rec_fake'][i].detach()
+			save_path = os.path.join(out_dir, training_name, iteration, batch_fake.path[i])
+			os.makedirs(os.path.dirname(save_path), exist_ok=True)
+			save_image(rec_fake, save_path)
 
-# 			sim_save_path = os.path.join(out_dir, 'sim', batch_fake.path[i])
-# 			os.makedirs(os.path.dirname(sim_save_path), exist_ok=True)
-# 			save_image(fake, sim_save_path)
-# #
+			sim_save_path = os.path.join(out_dir, 'sim', batch_fake.path[i])
+			os.makedirs(os.path.dirname(sim_save_path), exist_ok=True)
+			save_image(fake, sim_save_path)
+#
 
 
 # %%
