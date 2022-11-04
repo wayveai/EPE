@@ -98,7 +98,7 @@ class EPEExperiment(ee.GANExperiment):
 			os.environ['WANDB_DISABLED'] = 'true'
 			self.wandb_run = wandb.init(project='EPE', mode="disabled")
 		else:
-			tags = ['weather_somers_town_v1']
+			tags = ['somers-town_weather_v0']
 			self.wandb_run = wandb.init(project='EPE', tags=tags, notes=args.notes, entity='wayve-ai')
 
 		super(EPEExperiment, self).__init__(args)
