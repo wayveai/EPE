@@ -55,7 +55,7 @@ COPY EPE/environment.yaml /home/${USERNAME}/environment.yaml
 RUN mamba env update --name base --file /home/${USERNAME}/environment.yaml &&\
     conda clean -tipy
 
-RUN conda install -y -n base -c pytorch pytorch=1.12.1 torchvision=0.13.1 cudatoolkit=11.3 ipython
+# RUN conda install -y -n base -c pytorch pytorch=1.12.1 torchvision=0.13.1 cudatoolkit=11.3 ipython
 
 RUN pip install kornia
 
