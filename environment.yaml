@@ -4,8 +4,6 @@ channels:
   - conda-forge
   - pytorch
 dependencies:
-  - python=3.8
-  - cudatoolkit=11.3
   - scikit-image
   - faiss-gpu
   - azure-identity
@@ -71,8 +69,4 @@ dependencies:
   - imageio
   - wandb
   - opencv
-  # - korina
-  - pip:
-    - torch==1.12.1
-    - torchvision==0.13.1
 prefix: /home/kacper/miniconda3/envs/epe

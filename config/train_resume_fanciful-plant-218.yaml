@@ -1,11 +1,10 @@
 ---
-weight_dir: /home/kacper/data/EPE/weights # path to folder where checkpoints should be stored
-name_load: # <name at train/name_save>-<number of iterations>
+weight_dir: /home/kacper/resume # path to folder where checkpoints should be stored
 
 common:
   unpin: false # disable pinning for the loader
   batch_size: 1
-  num_loaders: 16
+  num_loaders: 6
   log_interval: 50 # print losses evey X iterations
   seed: 1
 

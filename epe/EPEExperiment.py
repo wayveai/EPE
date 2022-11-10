@@ -94,14 +94,26 @@ class PassthruGenerator(torch.nn.Module):
 
 class EPEExperiment(ee.GANExperiment):
 	def __init__(self, args):
+		self.resume_id = args.resume_id
+		self.resume_step = args.resume_step
+
 		if args.disabled:
 			os.environ['WANDB_DISABLED'] = 'true'
 			self.wandb_run = wandb.init(project='EPE', mode="disabled")
+		elif args.resume_id:
+			tags = ['somers-town_weather_v0']
+			self.wandb_run = wandb.init(project='EPE', id=args.resume_id, resume='must', tags=tags, notes=args.notes, entity='wayve-ai')
 		else:
 			tags = ['somers-town_weather_v0']
 			self.wandb_run = wandb.init(project='EPE', tags=tags, notes=args.notes, entity='wayve-ai')
 
 		super(EPEExperiment, self).__init__(args)
+		if args.resume_step:
+			self.gen_state.iterations = args.resume_step // 2
+			self.disc_state.iterations = args.resume_step // 2
+			print("*" * 100)
+			print("after resume set: ", self.i)
+
 		self.collate_fn_train = ds.JointEPEBatch.collate_fn
 		self.collate_fn_val   = ds.EPEBatch.collate_fn
 
@@ -112,7 +124,7 @@ class EPEExperiment(ee.GANExperiment):
 	def _parse_config(self):
 		super()._parse_config()
 
-		wandb.config.update(self.cfg)
+		wandb.config.update(self.cfg, allow_val_change=True)
 		# fake dataset
 
 		fake_cfg = dict(self.cfg.get('fake_dataset', {}))
@@ -169,8 +181,6 @@ class EPEExperiment(ee.GANExperiment):
 		gbuf_stats_path = wandb.config['fake_dataset']['gbuf_stats_path']
 		gbuf_stats = torch.load(gbuf_stats_path)
 
-		wandb.config.update({'fake_dataset': {'gbuf_mean': gbuf_stats['gbuf_mean'].tolist(),
-										'gbuf_std': gbuf_stats['gbuf_std'].tolist()}}, allow_val_change=True)
 
 		# training
 		if self.action == 'train':
@@ -199,8 +209,8 @@ class EPEExperiment(ee.GANExperiment):
 			self.dataset_fake_val = \
 			fake_datasets[self.fake_name](ds.utils.read_azure_filelist(self.fake_test_path,
 				sim_data_modes), data_root=sim_data_root, gbuffers=g_buffers,
-				gbuf_mean=self.wandb_run.config['fake_dataset']['gbuf_mean'],
-				gbuf_std=self.wandb_run.config['fake_dataset']['gbuf_std'])
+				gbuf_mean=gbuf_stats['gbuf_mean'],
+				gbuf_std=gbuf_stats['gbuf_std'])
 		else:
 			self.dataset_fake_val = fake_datasets[self.fake_name](ds.utils.read_azure_filelist(self.fake_val_path, sim_data_modes),
 				data_root=sim_data_root, gbuffers=g_buffers,

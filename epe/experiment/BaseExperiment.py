@@ -337,7 +337,10 @@ class BaseExperiment:
 		self.shuffle_train   = bool(self.cfg.get('shuffle_train', True))
 		
 		self.weight_dir      = Path(self.cfg.get('weight_dir', './savegames/'))		
-		self.weight_init     = self.cfg.get('name_load', None)
+		if self.resume_id and self.resume_step:
+			self.weight_init = f'{self.wandb_run.name}/{self.resume_step}'
+		else:
+			self.weight_init     = self.cfg.get('name_load', None)
 		self.dbg_dir         = Path(self.cfg.get('out_dir', './out/'))
 		self.result_ext      = '.jpg' 
 
@@ -550,7 +553,7 @@ class BaseExperiment:
 			while not self._should_stop(e, self.i):
 				NUM_PROGRESS_GRIDS = 4
 				img_progress_grids = [None] * NUM_PROGRESS_GRIDS
-				for batch in tqdm(self.loader, total=None):
+				for batch in tqdm(self.loader, total=None, initial=self.i):
 					gc.collect()
 					torch.cuda.empty_cache()
 
@@ -677,6 +680,8 @@ class BaseExperiment:
 		parser.add_argument('--gpu', type=int, default=0, help='ID of GPU. Use -1 to run on CPU. Default: 0')
 		parser.add_argument('--no_safe_exit', action='store_true', default=False, help='Do not save model if anything breaks.')
 		parser.add_argument('--notes', type=str, default='')
+		parser.add_argument('--resume_id', type=str, default=None)
+		parser.add_argument('--resume_step', type=int, default=None)
 		parser.add_argument('--disabled', default=False, action='store_true')
 		pass
 

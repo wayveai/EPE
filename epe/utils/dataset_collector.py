@@ -38,27 +38,28 @@ if __name__ == '__main__':
 
     # %% Get sim run_ids and timestamps
 
-    # parquet_root = '/mnt/remote/wayve-datasets/databricks-users-datasets/kyra/real_somers_town_2022_09_21/dataset=train'
-    # parquet_files = sorted([os.path.join(parquet_root, x) for x in os.listdir(parquet_root) if x.endswith('.parquet')])
+    parquet_root = '/mnt/remote/wayve-datasets/databricks-users-datasets/kyra/cyclists_2022_09_24/dataset=train'
+    parquet_files = sorted([os.path.join(parquet_root, x) for x in os.listdir(parquet_root) if x.endswith('.parquet')])
 
-    # parquet_files = parquet_files
 
-    # columns = [
-    #     'run_id_noseginfix',
-    #     'front-forward_image_timestamp_rgb'
-    # ]
-    # dataset = ParquetDataset(parquet_files, memory_map=False, validate_schema=False)
-    # df = dataset.read_pandas(columns=columns).to_pandas()
+    columns = [
+        'run_id_noseginfix',
+        'front-forward_image_timestamp_rgb'
+    ]
+    dataset = ParquetDataset(parquet_files, memory_map=False, validate_schema=False)
+    df = dataset.read_pandas(columns=columns).to_pandas()
 
 
     # with open(real_img_colection_path, 'w') as f:
-    #     for i, x in df.iterrows():
-    #         if i % SAMPLING_RATE == 0 :
-    #             run_id = x.loc['run_id_noseginfix']
-    #             timestamp = x.loc['front-forward_image_timestamp_rgb']
-    #             timestamp = str(timestamp).zfill(12) + 'unixus.jpeg'
-    #             path = f'{run_id}/cameras/front-forward--rgb/{timestamp}'
-    #             f.write(path + "\n")
+    for i, x in df.iterrows():
+        if i % SAMPLING_RATE == 0 :
+            run_id = x.loc['run_id_noseginfix']
+            timestamp = x.loc['front-forward_image_timestamp_rgb']
+            timestamp = str(timestamp).zfill(12) + 'unixus.jpeg'
+            path = f'{run_id}/cameras/front-forward--rgb/{timestamp}'
+            print(path)
+            break
+                # f.write(path + "\n")
 
     # with open(real_dataset_path, 'w') as f:
     #     for i, x in df.iterrows():
@@ -68,7 +69,7 @@ if __name__ == '__main__':
     #             # rgb_path = f'{run_id}/cameras/front-forward--rgb/{timestamp}unixus.jpeg'
     #             f.write(f'{run_id},{timestamp}\n')
 # %%
-def uniform_sampling(files_csv_path, sampling_rate, data_root='/home/kacper/data/datasets', path_filter=lambda x: True, car_filter=lambda x: True):
+def uniform_sampling(files_csv_path, sampling_rate, start_index=0, data_root='/home/kacper/data/datasets', path_filter=lambda x: True, car_filter=lambda x: True):
     with open(files_csv_path, 'w') as f:
         print(data_root)
         for car in os.listdir(data_root):
@@ -77,11 +78,10 @@ def uniform_sampling(files_csv_path, sampling_rate, data_root='/home/kacper/data
                     camera_path = os.path.join(data_root, car, run, 'cameras', 'front-forward--rgb')
                     if path_filter(camera_path):
                         img_names = sorted(os.listdir(camera_path))
-                        for i, img_name in enumerate(img_names):
-                            if i % sampling_rate == 0:
-                                run_id = os.path.join(car, run)
-                                timestamp = re.search('\d+', img_name).group()
-                                f.write(f'{run_id},{timestamp}\n')
+                        for i, img_name in enumerate(img_names[start_index::sampling_rate]):
+                            run_id = os.path.join(car, run)
+                            timestamp = re.search('\d+', img_name).group()
+                            f.write(f'{run_id},{timestamp}\n')
 
 
         

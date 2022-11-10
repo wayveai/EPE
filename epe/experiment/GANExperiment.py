@@ -149,19 +149,24 @@ class GANExperiment(BaseExperiment):
 		
 		base_filename = self.weight_dir / f'{self.weight_init}'
 
+		gen_iterations = self.gen_state.iterations
+		disc_iterations = self.disc_state.iterations
+
 		savegame = {}
 		for k in ['network', 'optimizer', 'scheduler']:		
-			savegame[k]	= torch.load(f'{base_filename}_gen-{k}.pth.tar')
+			savegame[k]	= torch.load(f'{base_filename}_gen-{k}.pth.tar', map_location=self.device)
 			pass
 		self.gen_state.load_from_dict(savegame)
+		self.gen_state.iterations = gen_iterations
 
 		# discriminator only for training
 		if self.action == 'train':
 			savegame = {}		
 			for k in ['network', 'optimizer', 'scheduler']:		
-				savegame[k]	= torch.load(f'{base_filename}_disc-{k}.pth.tar')
+				savegame[k]	= torch.load(f'{base_filename}_disc-{k}.pth.tar', map_location=self.device)
 				pass
 			self.disc_state.load_from_dict(savegame)
+			self.disc_state.iterations = disc_iterations
 			pass
 		pass
 
