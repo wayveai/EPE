@@ -133,11 +133,14 @@ class GBufferEncoder(nn.Module):
 
 		num_classes = classmap.shape[1]
 		features = 0
+		features_list = [0] * gbuffers.shape[0]
 		for c in range(num_classes):
-			features += classmap[:,c,:,:] * self.class_encoders[c](\
-				self.cls2gbuf[c](gbuffers) if c in self.cls2gbuf else gbuffers)
-			pass
+			for b in range(gbuffers.shape[0]):
+				features_list[b] += classmap[b,c,:,:] * self.class_encoders[c](\
+					self.cls2gbuf[c](gbuffers) if c in self.cls2gbuf else gbuffers[b])
+				pass
 
+		features = torch.stack(features_list, dim=0)
 		features = [features]
 		for layer in self.joint_encoder_layers:
 			features.append(layer(features[-1]))

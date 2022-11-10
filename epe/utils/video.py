@@ -8,8 +8,8 @@ warnings.filterwarnings('ignore', message='numpy.ufunc size changed')
 warnings.filterwarnings("ignore", category=DeprecationWarning) 
 
 from argparse import ArgumentParser
-import datetime
 import logging
+from time import time
 from pathlib import Path
 import random
 
@@ -36,12 +36,24 @@ from epe.utils.dataset_collector import uniform_sampling
 # For debugging
 # TODO: turn off for faster training?
 # torch.autograd.set_detect_anomaly(True)
+#  %%
+parser = ArgumentParser()
+parser.add_argument('model_name', type=str)
+parser.add_argument('--iteration', type=str, default='latest')
+parser.add_argument('--gpu', type=int, default=0)
+parser.add_argument('--batch_size', type=int, default=3)
+parser.add_argument('--start_index', type=int, default=0)
+args = parser.parse_args()
+
+# %%
+device = f'cuda:{args.gpu}'
 # %%
 import wandb
 api = wandb.Api()
-training_name = 'fanciful-plant-218'
-iteration = 'latest'
-runs = api.runs(path="wayve-ai/EPE", filters={"display_name": training_name})
+model_name = args.model_name
+iteration = args.iteration
+start_index = args.start_index
+runs = api.runs(path="wayve-ai/EPE", filters={"display_name": model_name})
 run = runs[0]
 # %%
 
@@ -50,16 +62,16 @@ run = runs[0]
 
 dataset_meta_path = '/home/kacper/code/EPE/datasets/somers_town'
 out_dir = '/home/kacper/data/out'
-video_test_path = '/home/kacper/data/EPE/somers_town/video_test.csv'
+video_test_path = f'/home/kacper/data/EPE/somers_town/video_test_{start_index}.csv'
 
 # sim_somers_town = '/home/kacper/code/EPE/datasets/somers_town/sim_files.csv'
 # sim_car_filter = lambda car: 'ningaloo' in car
 path_filter = lambda x: '2022-10-26--08-48-27--somerstown-aft-loop-anti-clockwise-v1--ccda56d6f883af83--ce9c3840' in x 
-SAMPLING_RATE = 1
-FRAME_RATE = 30 / SAMPLING_RATE
+SAMPLING_RATE = 3
+FRAME_RATE = 30.0
 assert FRAME_RATE.is_integer()
 
-uniform_sampling(video_test_path, SAMPLING_RATE, path_filter=path_filter)
+uniform_sampling(video_test_path, SAMPLING_RATE, start_index=start_index, path_filter=path_filter)
 
 data_root = '/home/kacper/data/datasets'
 g_buffers = ['depth', 'normal']
@@ -83,7 +95,7 @@ def seed_worker(id):
 collate_fn_val   = ds.EPEBatch.collate_fn
 
 loader_fake = torch.utils.data.DataLoader(dataset_fake_val, \
-	batch_size=1, shuffle=False, \
+	batch_size=args.batch_size, shuffle=False, \
 	num_workers=8, pin_memory=True, drop_last=False, worker_init_fn=seed_worker, collate_fn=collate_fn_val, prefetch_factor=6)
 
 
@@ -102,13 +114,12 @@ if generator_type == 'hr':
 elif generator_type == 'hr_new':
 	generator = nw.ResidualGenerator(nw.make_ienet2(gen_cfg))
 
-device = 'cuda:0'
 generator.to(device)
 generator.eval()
 toggle_grad(generator, False)
 # %%
 weights_name = 'gen-network.pth.tar' if iteration == 'latest' else f'{iteration}_gen-network.pth.tar'
-weight_path = f'/home/kacper/data/EPE/weights/{training_name}/{weights_name}'
+weight_path = f'/home/kacper/data/EPE/weights/{model_name}/{weights_name}'
 generator.load_state_dict(torch.load(weight_path, map_location=device))
 
 
@@ -128,7 +139,7 @@ with torch.no_grad():
 			fake = gen_vars['fake'][i].detach()
 			
 			rec_fake = gen_vars['rec_fake'][i].detach()
-			save_path = os.path.join(out_dir, training_name, iteration, batch_fake.path[i])
+			save_path = os.path.join(out_dir, model_name, iteration, batch_fake.path[i])
 			os.makedirs(os.path.dirname(save_path), exist_ok=True)
 			save_image(rec_fake, save_path)
 
@@ -145,7 +156,7 @@ for bi, batch_fake in enumerate(tqdm(loader_fake)):
 	folder = batch_fake.path[0].split('cameras')[0]
 	print(folder)
 
-	epe_base_dir  = os.path.join(out_dir, training_name, iteration, folder)
+	epe_base_dir  = os.path.join(out_dir, model_name, iteration, folder)
 	epe_video_dir = os.path.join(epe_base_dir, 'videos')
 	epe_video_save_path = os.path.join(epe_video_dir, 'front-forward--rgb-epe.mp4')
 	print(epe_video_save_path)
@@ -158,11 +169,12 @@ for bi, batch_fake in enumerate(tqdm(loader_fake)):
 	sim_base_dir  = os.path.join(out_dir, 'sim', folder)
 	sim_video_dir = os.path.join(sim_base_dir, 'videos')
 	sim_video_save_path = os.path.join(sim_video_dir, 'front-forward--rgb.mp4')
-	print(sim_video_save_path)
-	os.makedirs(os.path.dirname(sim_video_save_path), exist_ok=True)
+	if not os.path.exists(sim_video_save_path):
+		print(sim_video_save_path)
+		os.makedirs(os.path.dirname(sim_video_save_path), exist_ok=True)
 
-	command = f'ffmpeg -framerate {FRAME_RATE}  -pattern_type glob -i "{sim_base_dir}/cameras/front-forward--rgb/*.jpeg"  -c:v libx264 -r {FRAME_RATE} {sim_video_save_path}'
-	subprocess.run(command, shell=True)
+		command = f'ffmpeg -framerate {FRAME_RATE}  -pattern_type glob -i "{sim_base_dir}/cameras/front-forward--rgb/*.jpeg"  -c:v libx264 -r {FRAME_RATE} {sim_video_save_path}'
+		subprocess.run(command, shell=True)
 	
 	# save_image(rec_fake, save_path)
 	break
