@@ -66,8 +66,8 @@ video_test_path = f'/home/kacper/data/EPE/somers_town/video_test_{start_index}.c
 
 # sim_somers_town = '/home/kacper/code/EPE/datasets/somers_town/sim_files.csv'
 # sim_car_filter = lambda car: 'ningaloo' in car
-path_filter = lambda x: '2022-10-26--08-48-27--somerstown-aft-loop-anti-clockwise-v1--ccda56d6f883af83--ce9c3840' in x 
-SAMPLING_RATE = 3
+path_filter = lambda x: '2022-10-26--10-48-33--somerstown-aft-loop-anti-clockwise-v1--1ceea0c3ea91f1ef--3955de33' in x 
+SAMPLING_RATE = 4
 FRAME_RATE = 30.0
 assert FRAME_RATE.is_integer()
 

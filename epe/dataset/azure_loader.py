@@ -267,7 +267,7 @@ class AzureImageLoader:
             mode = 'rgb'
 
         name = path[4]
-        timestamp = int(re.findall(r'^\d+', name)[0])
+        timestamp = re.findall(r'^\d+', name)[0]
         output = self.load(run_id, camera, timestamp, mode=mode, sim2real_storage=sim2real_storage) 
         return Image.open(output)
             

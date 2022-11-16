@@ -27,7 +27,7 @@ def compute_gbuffer_statistics(ds):
     counter = 0
 
     print('Computing gbuffer statistics...')
-    for i in tqdm(indices[:10]):
+    for i in tqdm(indices[:1]):
         batch = ds[i]
         gbuffers = batch.gbuffers
         std, mean = torch.std_mean(gbuffers, (0, 2, 3))

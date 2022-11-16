@@ -10,7 +10,7 @@ import os
 
 logger = logging.getLogger('epe.dataset.utils')
 
-def read_azure_filelist(path_to_filelist, modes=['rgb']):
+def read_azure_filelist(path_to_filelist, modes=['rgb'], dataset_name='somers-town_weather_v0'):
 	paths = []
 	counter = 0
 	with open(path_to_filelist) as file:
@@ -28,7 +28,7 @@ def read_azure_filelist(path_to_filelist, modes=['rgb']):
 					camera = 'front-forward--rgb' if is_sim else 'front-forward'
 				else:
 					camera = f'front-forward--{mode}' 
-				ps.append(os.path.join(run_id, 'cameras', camera, f'{timestamp}unixus.{ext}'))
+				ps.append(os.path.join(dataset_name, run_id, 'cameras', camera, f'{timestamp}unixus.{ext}'))
 
 			paths.append(tuple(ps))
 	return paths
