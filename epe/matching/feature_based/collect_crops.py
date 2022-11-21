@@ -19,7 +19,7 @@ def seed_worker(id):
 
 if __name__ == '__main__':
 
-    device = torch.device('cuda')
+    device = torch.device('cuda:1')
 
     parser = argparse.ArgumentParser()
     parser.add_argument('name', type=str, help="Name of the dataset.")

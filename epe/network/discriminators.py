@@ -129,6 +129,8 @@ class ProjectionDiscriminator(nn.Module):
 		else:
 			self.out = nn.Sequential(nn.Conv2d(dim_out,dim_out,3,padding=1), nn.LeakyReLU(0.2, True), nn.Conv2d(dim_out, 1, 1))
 		self.num_layers = num_layers+1
+		# TODO: could be size 26 for Wayve segmentation classes however this is
+		# a simple dictionary so having higher size shouldn't matter
 		self.embedding = nn.Embedding(194,dim_out)
 		self.num_layers = num_layers+1
 

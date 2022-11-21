@@ -3,14 +3,12 @@ from pathlib import Path
 
 import imageio
 import numpy as np
-from skimage.transform import resize
 import scipy.io as sio
 import torch
 from epe.dataset.azure_loader import AzureImageLoader
 import os
 import random
 from tqdm import tqdm
-from torchvision.transforms import Resize
 
 
 from .batch_types import EPEBatch
@@ -46,7 +44,7 @@ def material_from_gt_label(gt_labelmap):
 
 
 class SimDataset(SyntheticDataset):
-	def __init__(self, paths, transform=None, gbuffers='fake', data_root='', shape=(600, 960), inference=False,
+	def __init__(self, paths, transform=None, gbuffers='fake', data_root='', inference=False,
 				gbuf_mean=None,
 				gbuf_std=None):
 		"""
@@ -63,7 +61,6 @@ class SimDataset(SyntheticDataset):
 		self.transform = transform
 		self.gbuffers  = gbuffers
 		self.data_root = data_root
-		self.shape = shape
 		self.inference = inference
 
 		# self.shader    = class_type
@@ -81,7 +78,6 @@ class SimDataset(SyntheticDataset):
 
 		self._log.info(f'Found {len(self._paths)} samples.')
 
-		self.resize = Resize(self.shape)
 
 		self.gbuf_mean = gbuf_mean
 		self.gbuf_std = gbuf_std
@@ -95,7 +91,7 @@ class SimDataset(SyntheticDataset):
 		""" Number of image channels the provided G-buffers contain."""
 		channels = 0
 		for buffer in self.gbuffers:
-			channels += {'depth': 1, 'normal':4}[buffer]
+			channels += {'depth': 1, 'normal':3}[buffer]
 
 		return channels
 		# return {'fake':32, 'all':26, 'img':0, 'no_light':17, 'geometry':8, 'depth': 1}[self.gbuffers]
@@ -113,7 +109,7 @@ class SimDataset(SyntheticDataset):
 		if self.gbuffers == 'all':
 			# all: just handle sky class differently
 			return {\
-				0:lambda g:g[:,15:21,:,:]}
+				0:lambda g:g[:,24,:,:]}
 		else:
 			return {}
 
@@ -131,7 +127,7 @@ class SimDataset(SyntheticDataset):
 			else:
 				img = img.astype(np.float32)
 		else:
-			img = np.array(self.azure_loader.load_img_from_path_and_resize(path, *self.shape))
+			img = np.array(self.azure_loader.load_img_from_path(path))
 
 		return img
 
@@ -158,6 +154,13 @@ class SimDataset(SyntheticDataset):
 				# buffer = (np.clip(buffer, 0, max_depth_m) / max_depth_m) * 2 - 1
 			if '--normal' in g_buffer_path:
 				buffer = normal_to_normalised_normal(buffer)
+				buffer = np.array(buffer)
+				tmp_buffer = np.zeros((buffer.shape[0] + 1, buffer.shape[1] + 1, buffer.shape[2]))
+				tmp_buffer[:buffer.shape[0], :buffer.shape[1]] = buffer
+				tmp_buffer[-1, :-1] = buffer[-1, :]
+				tmp_buffer[:-1, -1] = buffer[:, -1]
+				tmp_buffer[-1, -1] = buffer[-1, -1]
+				buffer = tmp_buffer
 
 			buffer = np.transpose(buffer, (2, 0, 1))
 			g_data.append(buffer)
@@ -165,7 +168,6 @@ class SimDataset(SyntheticDataset):
 		g_data = np.concatenate(g_data)
 
 		img = mat2tensor(self.load_file(img_path).astype(np.float32) / 255.0)
-		img = self.resize(img)
 		gbuffers = torch.from_numpy(g_data.astype(np.float32)).float()
 		gt_labels = mat2tensor(material_from_gt_label(self.load_file(gt_label_path)))
 

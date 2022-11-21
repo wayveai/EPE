@@ -18,7 +18,7 @@ from torchvision.transforms import Resize
 logger = logging.getLogger(__file__)
 
 class ImageDataset(torch.utils.data.Dataset):
-	def __init__(self, name, img_paths, transform=None, shape=(600, 960), data_root=''):
+	def __init__(self, name, img_paths, transform=None, data_root=''):
 		"""
 
 		name -- Name used for debugging, log messages.
@@ -33,14 +33,12 @@ class ImageDataset(torch.utils.data.Dataset):
 		self.transform   = transform
 
 		self.azure_loader = AzureImageLoader()
-		self.shape = shape
 		
 		self.name = name
 		self._log = logging.getLogger(f'epe.dataset.{name}')
 		self._log.info(f'Found {len(self.paths)} images.')
 		self.data_root = data_root
 
-		self.resize = Resize(shape)
 		pass
 
 
@@ -53,7 +51,7 @@ class ImageDataset(torch.utils.data.Dataset):
 				img = imageio.imread(path).astype(np.float32)
 
 			else:
-				img = np.array(self.azure_loader.load_img_from_path_and_resize(path, *self.shape))
+				img = np.array(self.azure_loader.load_img_from_path(path))
 			# if len(img.shape) == 2:
 			# 	img = np.expand_dims(img, 2)
 			if '.jpeg' in path or '.jpg' in path:
@@ -81,7 +79,6 @@ class ImageDataset(torch.utils.data.Dataset):
 
 		img = mat2tensor(img)   
 		# TODO: reformat for a cleaner way of resizing images when loading
-		img = self.resize(img)
 		return ImageBatch(img, path)
 
 

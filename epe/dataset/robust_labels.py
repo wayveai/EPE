@@ -13,7 +13,7 @@ from .utils import mat2tensor
 logger = logging.getLogger('epe.dataset.robust')
 
 class RobustlyLabeledDataset(ImageDataset):
-	def __init__(self, name, img_and_robust_label_paths, img_transform=None, label_transform=None, data_root='', shape=(600, 960)):
+	def __init__(self, name, img_and_robust_label_paths, img_transform=None, label_transform=None, data_root=''):
 		""" Create an image dataset with robust labels.
 
 		name -- Name of dataset, used for debug output and finding corresponding sampling strategy
@@ -24,7 +24,6 @@ class RobustlyLabeledDataset(ImageDataset):
 		self._log = logging.getLogger(f'epe.dataset.{name}')
 
 		self.data_root = data_root
-		self.shape = shape
 		self.azure_loader = AzureImageLoader()
 
 		self._img2label = {}

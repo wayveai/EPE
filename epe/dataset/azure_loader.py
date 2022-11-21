@@ -295,7 +295,7 @@ class AzureImageLoader:
             is_sim = 'ningaloo' in run_id
             hot = False
             shard_index = -2
-            ext_map = {'rgb': 'jpeg', 'segmentation': 'png', 'segmentation-mseg': 'png', 'depth': 'png', 'normal': 'png'}
+            ext_map = {'rgb': 'jpeg', 'segmentation': 'png', 'segmentation-mseg': 'png', 'depth': 'png', 'normal': 'tif'}
             camera_id = camera if not is_sim and mode == 'rgb' else f'{camera}--{mode}'
             blob_name = f'{run_id}/cameras/{camera_id}/{timestamp}unixus.{ext_map[mode]}'
             container = 'sim2real-image-translation'

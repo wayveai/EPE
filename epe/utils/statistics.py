@@ -2,7 +2,6 @@
 import epe.dataset as ds
 from epe.dataset.sim_dataset import SimDataset
 import torch
-import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 import os
@@ -10,10 +9,10 @@ import random
 # %%
 
 g_buffers = ['depth', 'normal']
-sim_data_modes = ['rgb', 'segmentation', 'segmentation-mseg', *g_buffers]
-real_data_modes = ['rgb', 'segmentation-mseg']
-data_root = '/home/kacper/data/datasets'
-dataset_meta_path = '/home/kacper/code/EPE/datasets/somers_town'
+sim_data_modes = ['rgb', 'segmentation', 'segmentation', *g_buffers]
+real_data_modes = ['rgb', 'segmentation']
+data_root = '/home/kacper/data/datasets/rider_v0'
+dataset_meta_path = '/home/kacper/data/datasets/rider_v0'
 fake_path = os.path.join(dataset_meta_path, 'sim_files.csv')
 
 # validation
@@ -27,7 +26,7 @@ def compute_gbuffer_statistics(ds):
     counter = 0
 
     print('Computing gbuffer statistics...')
-    for i in tqdm(indices[:1]):
+    for i in tqdm(indices[:1000]):
         batch = ds[i]
         gbuffers = batch.gbuffers
         std, mean = torch.std_mean(gbuffers, (0, 2, 3))

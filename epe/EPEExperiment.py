@@ -174,8 +174,8 @@ class EPEExperiment(ee.GANExperiment):
 
 		self._log.debug('Initializing datasets ...')
 		g_buffers = wandb.config['fake_dataset']['g_buffers']
-		sim_data_modes = ['rgb', 'segmentation', 'segmentation-mseg', *g_buffers]
-		real_data_modes = ['rgb', 'segmentation-mseg']
+		sim_data_modes = ['rgb', 'segmentation', 'segmentation', *g_buffers]
+		real_data_modes = ['rgb', 'segmentation']
 		real_data_root = wandb.config['real_dataset']['data_root']
 		sim_data_root = wandb.config['fake_dataset']['data_root']
 		gbuf_stats_path = wandb.config['fake_dataset']['gbuf_stats_path']
