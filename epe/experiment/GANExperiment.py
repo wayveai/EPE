@@ -202,14 +202,15 @@ class GANExperiment(BaseExperiment):
 						grids.append(grid)
 
 						# run discriminators
-						run_discs = [True] * len(self.network.discriminator)
-						realism_maps = self.network.discriminator.forward(\
-							vgg=self.vgg, img=rec_fake, robust_labels=batch_fake.robust_labels.to(self.device), 
-							fix_input=True, run_discs=run_discs)
-						realism_maps = [torch.squeeze(x, 0) for x in realism_maps]
-						realism_maps = make_grid(realism_maps, 5)
-						realism_maps_grids.append(realism_maps)
-						pass
+						# run_discs = [True] * len(self.network.discriminator)
+						# realism_maps = self.network.discriminator.forward(\
+						# 	vgg=self.vgg, img=rec_fake, robust_labels=batch_fake.robust_labels.to(self.device), 
+						# 	fix_input=True, run_discs=run_discs)
+						# realism_maps = [torch.squeeze(x, 0) for x in realism_maps]
+
+						# realism_maps = make_grid(realism_maps, 5)
+						# realism_maps_grids.append(realism_maps)
+						# pass
 
 					else:
 						break
@@ -225,9 +226,9 @@ class GANExperiment(BaseExperiment):
 			grids = wandb.Image(grids)
 			wandb.log({'valid/images': grids}, step=self.i)
 			
-			realism_maps_grids = make_grid(realism_maps_grids, 1, padding=5)
-			realism_maps_grids = wandb.Image(realism_maps_grids)
-			wandb.log({'valid/realism maps': realism_maps_grids})
+			# realism_maps_grids = make_grid(realism_maps_grids, 1, padding=5)
+			# realism_maps_grids = wandb.Image(realism_maps_grids)
+			# wandb.log({'valid/realism maps': realism_maps_grids})
 
 			self.network.train()
 
