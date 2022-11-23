@@ -210,7 +210,7 @@ class AzureImageLoader:
 # %%
 loader = AzureImageLoader()
 
-def upload_files(files, dataset_name='somers-town_weather_v0'):
+def upload_files(files, dataset_name):
     # files: tuple of files to be uploaded (e.g. sharing timestamp)
     for ts in tqdm(files):
         for file in ts:
