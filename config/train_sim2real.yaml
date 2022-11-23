@@ -6,7 +6,7 @@ common:
   unpin: false # disable pinning for the loader
   batch_size: 1
   num_loaders: 16
-  log_interval: 50 # print losses evey X iterations
+  log_interval: 100 # print losses evey X iterations
   seed: 1
 
 train:
@@ -15,7 +15,7 @@ train:
   save_epochs: -1 # save every X epochs
   save_iterations: 10000 # save every X iterations
   shuffle_train: true
-  val_interval: 750 # run inference on validation set every X iterations
+  val_interval: 1000 # run inference on validation set every X iterations
   no_validation: False
 
 test:
