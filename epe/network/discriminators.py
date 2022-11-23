@@ -162,7 +162,10 @@ class ProjectionDiscriminator(nn.Module):
 			if y.dtype == torch.int64:
 				# precomputed segmentation
 				_, _, hy, wy = y.shape
-				y = self.embedding(y.reshape(-1))
+				# TODO: look over the dataset and ensure this error doesn't occur
+				y = y.reshape(-1)
+				y = torch.clamp(y, 0, 193)
+				y = self.embedding(y)
 				y = y.permute(1,0).reshape(1,c,hy,wy)
 				y = F.interpolate(y, (h, w), mode='bilinear', align_corners=True)
 			else:
