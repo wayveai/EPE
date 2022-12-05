@@ -7,14 +7,22 @@ import numpy as np
 from tqdm import tqdm
 import os
 import random
+
+from epe.utils.dataset_collector import uniform_sampling
 # %%
 
 g_buffers = ['depth', 'normal']
 sim_data_modes = ['rgb', 'segmentation', 'segmentation-mseg', *g_buffers]
 real_data_modes = ['rgb', 'segmentation-mseg']
-data_root = '/home/kacper/data/datasets'
-dataset_meta_path = '/home/kacper/code/EPE/datasets/somers_town'
+data_root = '/mnt/remote/data/users/kacper/datasets'
+dataset_meta_path = '/mnt/remote/data/users/kacper/datasets/somers-town_weather_v0'
 fake_path = os.path.join(dataset_meta_path, 'sim_files.csv')
+
+# %%
+# uniform_sampling(fake_path, 1, data_root=dataset_meta_path, car_filter=lambda x: 'ningaloo' in x, )
+
+# %%
+
 
 # validation
 dataset_fake = SimDataset(ds.utils.read_azure_filelist(fake_path, sim_data_modes), data_root=data_root, gbuffers=g_buffers)
@@ -27,7 +35,7 @@ def compute_gbuffer_statistics(ds):
     counter = 0
 
     print('Computing gbuffer statistics...')
-    for i in tqdm(indices[:1]):
+    for i in tqdm(indices[:1000]):
         batch = ds[i]
         gbuffers = batch.gbuffers
         std, mean = torch.std_mean(gbuffers, (0, 2, 3))

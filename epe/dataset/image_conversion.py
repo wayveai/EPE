@@ -12,7 +12,7 @@ MAX_DEPTH_M = 1000
 MAX_INVDEPTH_INVM = 1 / MIN_DEPTH_M
 MIN_INVDEPTH_INVM = 1 / MAX_DEPTH_M
 
-MAX_NORMAL = 65535
+MAX_NORMAL = 255
 
 def is_jpeg_encoded(np_img: np.ndarray) -> bool:
     img_shape = np_img.shape
@@ -244,6 +244,5 @@ def depth_m_to_inverse_depth_uint16(depth_m: np.ndarray) -> np.ndarray:
 # Normals
 
 def normal_to_normalised_normal(normal):
-    # maps range [0, 65535] to [-1, 1]
     normal = normal / MAX_NORMAL
-    return normal * 2 - 1
+    return normal

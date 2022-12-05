@@ -95,7 +95,7 @@ class SimDataset(SyntheticDataset):
 		""" Number of image channels the provided G-buffers contain."""
 		channels = 0
 		for buffer in self.gbuffers:
-			channels += {'depth': 1, 'normal':4}[buffer]
+			channels += {'depth': 1, 'normal':3}[buffer]
 
 		return channels
 		# return {'fake':32, 'all':26, 'img':0, 'no_light':17, 'geometry':8, 'depth': 1}[self.gbuffers]
@@ -157,6 +157,8 @@ class SimDataset(SyntheticDataset):
 				buffer = np.expand_dims(buffer, axis=-1)
 				# buffer = (np.clip(buffer, 0, max_depth_m) / max_depth_m) * 2 - 1
 			if '--normal' in g_buffer_path:
+				# only take RGB from RGBA surface normal encoding
+				buffer = buffer[:, :, :3]
 				buffer = normal_to_normalised_normal(buffer)
 
 			buffer = np.transpose(buffer, (2, 0, 1))
