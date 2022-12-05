@@ -127,9 +127,9 @@ class GBufferEncoder(nn.Module):
 		of the image enhancment network.
 		"""
 
-		if self._log.isEnabledFor(logging.DEBUG):
-			self._log.debug(f'G-BufferEncoder:forward(g:{gbuffers.shape}, c:{classmap.shape})')
-			pass
+		# if self._log.isEnabledFor(logging.DEBUG):
+		# 	self._log.debug(f'G-BufferEncoder:forward(g:{gbuffers.shape}, c:{classmap.shape})')
+		# 	pass
 
 		num_classes = classmap.shape[1]
 		features = 0

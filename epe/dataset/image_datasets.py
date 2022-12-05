@@ -81,7 +81,7 @@ class ImageDataset(torch.utils.data.Dataset):
 
 		img = mat2tensor(img)   
 		# TODO: reformat for a cleaner way of resizing images when loading
-		img = self.resize(img)
+		# img = self.resize(img)
 		return ImageBatch(img, path)
 
 
