@@ -11,9 +11,9 @@ import os
 gen_cfg = {'encoder_type': 'ENCODER', 'stem_norm': 'group', 'num_stages': 5, 'other_norm': 'group', 'gbuffer_norm': 'RAC', 'gbuffer_encoder_norm': 'residual2', 'num_gbuffer_layers': 3, 'num_classes': 12, 'num_gbuffer_channels': 5, 'cls2gbuf': {}}
 generator = nw.ResidualGenerator(nw.make_ienet2(gen_cfg))
 # %%
-dataset_meta_path = '/home/kacper/code/EPE/datasets/somers_town'
+dataset_meta_path = '/mnt/remote/data/users/kacper/datasets/somers-town_weather_v0'
 out_dir = '/home/kacper/data/out'
-video_test_path = f'/home/kacper/data/EPE/somers_town/test.csv'
+video_test_path = f'{dataset_meta_path}/sim_files.csv'
 
 # sim_somers_town = '/home/kacper/code/EPE/datasets/somers_town/sim_files.csv'
 # sim_car_filter = lambda car: 'ningaloo' in car
@@ -56,6 +56,7 @@ print(len(loader_fake))
 example = None
 for batch in loader_fake:
     example = batch
+    break
 
 # %%
 print(example)
