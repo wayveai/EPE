@@ -502,7 +502,7 @@ class BaseExperiment:
 				for bi, batch_fake in enumerate(self.loader):
 					# last item of batch_fake is just index
 					
-					gen_vars = self._forward_generator_fake(batch_fake.to(self.device), i)
+					gen_vars = self._forward_generator_fake(batch_fake.to(self.device))
 					if bi < max_counter:
 						grid = None
 						fake = batch_fake.img.detach()

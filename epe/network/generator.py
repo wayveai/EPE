@@ -15,6 +15,6 @@ class ResidualGenerator(nn.Module):
 
 	def forward(self, epe_batch):
 		net_out = self.network(epe_batch)
-		x = make_residual(epe_batch.img, net_out)
+		x = make_residual(epe_batch['img'], net_out)
 		return x
 

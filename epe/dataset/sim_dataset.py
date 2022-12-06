@@ -167,7 +167,7 @@ class SimDataset(SyntheticDataset):
 		g_data = np.concatenate(g_data)
 
 		img = mat2tensor(self.load_file(img_path).astype(np.float32) / 255.0)
-		img = self.resize(img)
+		# img = self.resize(img)
 		gbuffers = torch.from_numpy(g_data.astype(np.float32)).float()
 		gt_labels = mat2tensor(material_from_gt_label(self.load_file(gt_label_path)))
 
