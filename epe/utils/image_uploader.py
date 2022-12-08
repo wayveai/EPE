@@ -210,17 +210,18 @@ class AzureImageLoader:
 # %%
 loader = AzureImageLoader()
 
-def upload_files(files, dataset_name='somers-town_weather_v0'):
+def upload_files(files, dataset_name='somers-town_weather_v1'):
     # files: tuple of files to be uploaded (e.g. sharing timestamp)
     for ts in tqdm(files):
         for file in ts:
             loader.upload_img(file, dataset_name=dataset_name)
 # %%
-sim_files = read_azure_filelist('/home/kacper/code/EPE/datasets/somers_town/sim_files.csv', ['rgb', 'depth', 'normal', 'segmentation'])
+dataset_name = 'somers-town_weather_v1'
+sim_files = read_azure_filelist('/mnt/remote/data/users/kacper/datasets/somers-town_weather_v1/sim_files.csv', ['rgb', 'depth', 'normal', 'segmentation', 'segmentation-mseg'])
 upload_files(sim_files)
 
 # # %%
-real_files = read_azure_filelist('/home/kacper/code/EPE/datasets/somers_town/real_files.csv', ['rgb', 'segmentatio'])
+real_files = read_azure_filelist('/mnt/remote/data/users/kacper/datasets/somers-town_weather_v1/real_files.csv', ['rgb', 'segmentation-mseg'])
 upload_files(real_files)
 
 # %%
