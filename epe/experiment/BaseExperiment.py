@@ -53,8 +53,10 @@ def parse_loglevel(loglevel_arg):
 def init_logging(args):
 	now = datetime.datetime.now()
 	log_path = args.log_dir / f'{args.config.stem}_{datetime.date.today().isoformat()}_{now.hour}-{now.minute}-{now.second}.log'
+	# with open(log_path, 'w') as f:
+	# 	pass
 	level = parse_loglevel(args.log)
-	logging.basicConfig(level=level, format="%(asctime)s %(message)s", handlers=[logging.FileHandler(log_path, mode='a'), logging.StreamHandler()])	
+	logging.basicConfig(level=level, format="%(asctime)s %(message)s", handlers=[logging.StreamHandler()])	
 
 
 class NetworkState:
@@ -502,7 +504,7 @@ class BaseExperiment:
 				for bi, batch_fake in enumerate(self.loader):
 					# last item of batch_fake is just index
 					
-					gen_vars = self._forward_generator_fake(batch_fake.to(self.device), i)
+					gen_vars = self._forward_generator_fake(batch_fake.to(self.device))
 					if bi < max_counter:
 						grid = None
 						fake = batch_fake.img.detach()
@@ -673,8 +675,8 @@ class BaseExperiment:
 	def add_arguments(cls, parser):
 		# methods available at command line 
 		
-		parser.add_argument('action', type=str, choices=cls.actions)
-		parser.add_argument('config', type=Path, help='Path to config file.')
+		parser.add_argument('--action', type=str, choices=cls.actions)
+		parser.add_argument('--config', type=Path, help='Path to config file.')
 		parser.add_argument('-log', '--log', type=str, default='info', choices=_logstr2level.keys())
 		parser.add_argument('--log_dir', type=Path, default='./log/', help='Directory for log files.')
 		parser.add_argument('--gpu', type=int, default=0, help='ID of GPU. Use -1 to run on CPU. Default: 0')
@@ -683,6 +685,8 @@ class BaseExperiment:
 		parser.add_argument('--resume_id', type=str, default=None)
 		parser.add_argument('--resume_step', type=int, default=None)
 		parser.add_argument('--disabled', default=False, action='store_true')
+		parser.add_argument('--session_path ', default='')
+		parser.add_argument('--session_dir_name ', default='')
 		pass
 
 	

@@ -481,10 +481,9 @@ class HighResolutionNet(nn.Module):
 
 
 	def forward(self, epe_batch):
-
-		x = epe_batch.img
-		g = epe_batch.gbuffers
-		s = epe_batch.gt_labels
+		x = epe_batch['img']
+		g = epe_batch['gbuffers']
+		s = epe_batch['gt_labels']
 		del epe_batch
 
 		_,_,h,w = x.shape

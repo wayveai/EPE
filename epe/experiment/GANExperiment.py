@@ -133,9 +133,9 @@ class GANExperiment(BaseExperiment):
 			except:
 				self._log.error('Cannot store {k}.')
 
-		artifact = wandb.Artifact('model', type='model')
-		artifact.add_file(latest_gen_network_path)
-		self.wandb_run.log_artifact(artifact)
+		# artifact = wandb.Artifact('model', type='model')
+		# artifact.add_file(latest_gen_network_path)
+		# self.wandb_run.log_artifact(artifact)
 
 		sd, od = self.disc_state.save_to_dict()
 		for k,v in sd.items():
