@@ -7,6 +7,7 @@ ARG CONDA_PYTHON_VERSION=3
 ARG CONDA_DIR=/opt/conda
 ARG USERNAME=kacper
 ARG USERID=1000
+ARG EPE_DIR='/app'
 
 # Instal basic utilities
 RUN apt-get update && \
@@ -65,10 +66,15 @@ RUN pip install -e /home/${USERNAME}/PerceptualSimilarity
 
 COPY ../../weights /home/${USERNAME}/resume
 
-COPY EPE /home/${USERNAME}/code/EPE
-RUN pip install -e /home/${USERNAME}/code/EPE
-WORKDIR /home/${USERNAME}/code/EPE
+COPY EPE ${EPE_DIR}
+RUN pip install -e ${EPE_DIR}
+WORKDIR ${EPE_DIR}
 
 # For interactive shell
 RUN conda init bash
 RUN echo "conda activate base" >> /home/$USERNAME/.bashrc
+
+RUN mkdir -p /app/python_runtime/python3/bin
+RUN ln -s ${CONDA_DIR}/bin/python /app/python_runtime/python3/bin/python3
+
+ENTRYPOINT [ "python", "/app/main.py", "--log", "info"]
