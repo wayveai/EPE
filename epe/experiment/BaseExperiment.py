@@ -341,8 +341,16 @@ class BaseExperiment:
 		
 		self.weight_dir      = Path(self.cfg.get('weight_dir', './savegames/'))		
 		training_dir = os.environ.get('TRAINING_SESSION_DIR')
-		if training_dir:
-			self.weight_dir = Path(training_dir) / self.weight_dir
+		print('*'*100)
+		print('*'*100)
+		print('TRAINING_SESSION_DIR')
+		print(training_dir)
+		# if training_dir:
+		# 	self.weight_dir = Path(training_dir) / self.weight_dir
+		# print(self.weight_dir)
+		# if training_dir:
+		# 	self.weight_dir = Path('/mnt/remote/azure_session_dir/sim/epe') / self.weight_dir
+		print(self.weight_dir)
 		if self.resume_id and self.resume_step:
 			self.weight_init = f'{self.wandb_run.name}/{self.resume_step}'
 		else:
