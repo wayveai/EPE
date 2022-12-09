@@ -59,7 +59,7 @@ class PairedDataset(torch.utils.data.Dataset):
 
 
 class MatchedCrops(PairedDataset):
-	def __init__(self, source_dataset, target_dataset, cfg):
+	def __init__(self, source_dataset, target_dataset, cfg, source_dataset_name, target_dataset_name):
 
 		super(MatchedCrops, self).__init__(source_dataset, target_dataset)
 
@@ -73,7 +73,7 @@ class MatchedCrops(PairedDataset):
 
 		self._weighted = False
 
-		self.src_crops, self.dst_crops = load_matching_crops(matched_crop_path)
+		self.src_crops, self.dst_crops = load_matching_crops(matched_crop_path, source_dataset_name, target_dataset_name)
 
 		valid_src_crops, valid_dst_crops = [], []
 		valid_ids = []

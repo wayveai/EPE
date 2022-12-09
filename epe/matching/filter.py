@@ -1,6 +1,7 @@
 import csv
 import logging
 from pathlib import Path
+import os
 
 import numpy as np
 from tqdm import tqdm
@@ -10,7 +11,7 @@ from epe.dataset.utils import load_crops
 logger = logging.getLogger('epe.matching.filter')
 
 
-def load_matching_crops(path):
+def load_matching_crops(path, source_dataset_name, target_dataset_name):
 	""" Loads pairs of crops from a csv file. """
 
 	logger.debug(f'Loading cached crop matches from "{path}" ...')
@@ -19,8 +20,8 @@ def load_matching_crops(path):
 	with open(path) as file:
 		reader = csv.DictReader(file)
 		for row in reader:
-			src_crops.append((row['src_path'], int(row['src_r0']), int(row['src_r1']), int(row['src_c0']), int(row['src_c1'])))
-			dst_crops.append((row['dst_path'], int(row['dst_r0']), int(row['dst_r1']), int(row['dst_c0']), int(row['dst_c1'])))
+			src_crops.append((os.path.join(source_dataset_name, row['src_path']), int(row['src_r0']), int(row['src_r1']), int(row['src_c0']), int(row['src_c1'])))
+			dst_crops.append((os.path.join(target_dataset_name, row['dst_path']), int(row['dst_r0']), int(row['dst_r1']), int(row['dst_c0']), int(row['dst_c1'])))
 			pass
 		pass
 
@@ -28,6 +29,7 @@ def load_matching_crops(path):
 	return src_crops, dst_crops
 
 
+# TODO: crop dataset name from src_path and dst_path
 def save_matching_crops(src_crops, dst_crops, path):
 	""" Saves pairs of matched crops to a csv file. """
 

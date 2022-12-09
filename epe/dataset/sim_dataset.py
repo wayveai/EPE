@@ -131,7 +131,7 @@ class SimDataset(SyntheticDataset):
 			else:
 				img = img.astype(np.float32)
 		else:
-			img = np.array(self.azure_loader.load_img_from_path_and_resize(path, *self.shape))
+			img = np.array(self.azure_loader.load_img_from_path(path))
 
 		return img
 

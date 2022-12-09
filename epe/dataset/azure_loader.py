@@ -255,8 +255,9 @@ class AzureImageLoader:
 
     def load_img_from_path(self, path, sim2real_storage=True):
         path = str(path).split('/')
-        run_id = '/'.join(path[:2])
-        camera = path[3]
+        cameras_index = path.index('cameras')
+        run_id = '/'.join(path[:cameras_index])
+        camera = path[cameras_index + 1]
 
         if '--' in camera:
             camera_split = camera.split('--')
@@ -266,7 +267,7 @@ class AzureImageLoader:
             camera = 'front-forward'
             mode = 'rgb'
 
-        name = path[4]
+        name = path[-1]
         timestamp = re.findall(r'^\d+', name)[0]
         output = self.load(run_id, camera, timestamp, mode=mode, sim2real_storage=sim2real_storage) 
         return Image.open(output)

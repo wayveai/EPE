@@ -53,7 +53,7 @@ class ImageDataset(torch.utils.data.Dataset):
 				img = imageio.imread(path).astype(np.float32)
 
 			else:
-				img = np.array(self.azure_loader.load_img_from_path_and_resize(path, *self.shape))
+				img = np.array(self.azure_loader.load_img_from_path(path))
 			# if len(img.shape) == 2:
 			# 	img = np.expand_dims(img, 2)
 			if '.jpeg' in path or '.jpg' in path:

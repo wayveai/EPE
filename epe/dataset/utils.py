@@ -10,7 +10,7 @@ import os
 
 logger = logging.getLogger('epe.dataset.utils')
 
-def read_azure_filelist(path_to_filelist, modes=['rgb'], dataset_name='somers-town_weather_v0'):
+def read_azure_filelist(path_to_filelist, modes=['rgb'], dataset_name='somers-town_weather_v1'):
 	paths = []
 	counter = 0
 	with open(path_to_filelist) as file:

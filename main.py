@@ -130,12 +130,14 @@ class EPEExperiment(ee.GANExperiment):
 		self.fake_name       = str(fake_cfg.get('name'))
 		self.fake_train_path = Path(fake_cfg.get('train_filelist', None))
 		self.fake_val_path   = Path(fake_cfg.get('val_filelist', None))
+		self.fake_dataset_name       = str(fake_cfg.get('dataset_name'))
 
 		# real dataset
 
 		real_cfg = dict(self.cfg.get('real_dataset', {}))
 		self.real_name     = str(real_cfg.get('name'))
 		self.real_basepath = Path(real_cfg.get('filelist', None))
+		self.real_dataset_name       = str(real_cfg.get('dataset_name'))
 
 		self._log.debug(f'  Real dataset {self.real_name} in {self.real_basepath}.')
 
@@ -184,12 +186,12 @@ class EPEExperiment(ee.GANExperiment):
 		# training
 		if self.action == 'train':
 			source_dataset = fake_datasets[self.fake_name](ds.utils.read_azure_filelist(self.fake_train_path,
-							sim_data_modes), data_root=sim_data_root, gbuffers=g_buffers, gbuf_mean=gbuf_stats['gbuf_mean'], gbuf_std=gbuf_stats['gbuf_std'])
+							sim_data_modes, dataset_name=self.fake_dataset_name), data_root=sim_data_root, gbuffers=g_buffers, gbuf_mean=gbuf_stats['gbuf_mean'], gbuf_std=gbuf_stats['gbuf_std'])
 			self.dataset_fake = source_dataset
-			target_dataset = ds.RobustlyLabeledDataset(self.real_name, ds.utils.read_azure_filelist(self.real_basepath, real_data_modes), data_root=real_data_root)
+			target_dataset = ds.RobustlyLabeledDataset(self.real_name, ds.utils.read_azure_filelist(self.real_basepath, real_data_modes, dataset_name=self.real_dataset_name), data_root=real_data_root)
 
 			if self.sampling == 'matching':
-				self.dataset_train = MatchedCrops(source_dataset, target_dataset, self.sample_cfg)
+				self.dataset_train = MatchedCrops(source_dataset, target_dataset, self.sample_cfg, self.fake_dataset_name, self.real_dataset_name)
 			elif self.sampling.startswith('independent_'):
 				crop_size = int(self.sampling[len('independent_'):])
 				self.dataset_train = IndependentCrops(source_dataset, target_dataset, self.sample_cfg)
