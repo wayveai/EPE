@@ -77,4 +77,4 @@ RUN echo "conda activate base" >> /home/$USERNAME/.bashrc
 RUN mkdir -p /app/python_runtime/python3/bin
 RUN ln -s ${CONDA_DIR}/bin/python /app/python_runtime/python3/bin/python3
 
-ENTRYPOINT [ "python", "/app/main.py", "--log", "info", "--log_dir", "/app/log", "--action", "train", "--config", "/config/train_sim2real.yaml"]
+ENTRYPOINT [ "python", "/app/main.py"]
