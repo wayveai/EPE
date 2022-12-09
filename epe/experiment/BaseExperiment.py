@@ -15,7 +15,6 @@ from tqdm import tqdm
 import gc
 import wandb
 import re
-import os
 
 
 def seed_worker(id):
@@ -340,17 +339,6 @@ class BaseExperiment:
 		self.shuffle_train   = bool(self.cfg.get('shuffle_train', True))
 		
 		self.weight_dir      = Path(self.cfg.get('weight_dir', './savegames/'))		
-		training_dir = os.environ.get('TRAINING_SESSION_DIR')
-		print('*'*100)
-		print('*'*100)
-		print('TRAINING_SESSION_DIR')
-		print(training_dir)
-		# if training_dir:
-		# 	self.weight_dir = Path(training_dir) / self.weight_dir
-		# print(self.weight_dir)
-		# if training_dir:
-		# 	self.weight_dir = Path('/mnt/remote/azure_session_dir/sim/epe') / self.weight_dir
-		print(self.weight_dir)
 		if self.resume_id and self.resume_step:
 			self.weight_init = f'{self.wandb_run.name}/{self.resume_step}'
 		else:
@@ -687,8 +675,8 @@ class BaseExperiment:
 	def add_arguments(cls, parser):
 		# methods available at command line 
 		
+		parser.add_argument('--action', type=str, choices=cls.actions)
 		parser.add_argument('--config', type=Path, help='Path to config file.')
-		parser.add_argument('--action', type=str, choices=cls.actions, default='train')
 		parser.add_argument('-log', '--log', type=str, default='info', choices=_logstr2level.keys())
 		parser.add_argument('--log_dir', type=Path, default='./log/', help='Directory for log files.')
 		parser.add_argument('--gpu', type=int, default=0, help='ID of GPU. Use -1 to run on CPU. Default: 0')
