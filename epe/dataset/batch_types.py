@@ -96,8 +96,6 @@ class EPEBatch(ImageBatch):
         epe_batch['img'] = self.img
         epe_batch['gbuffers'] = self.gbuffers
         epe_batch['gt_labels'] = self.gt_labels
-        print('*' * 100)
-        print(arg)
         return epe_batch[arg]
     
     def to_dict(self):
