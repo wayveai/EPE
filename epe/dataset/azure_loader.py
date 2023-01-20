@@ -304,7 +304,7 @@ class AzureImageLoader:
         elif run_id[:8] == 'ningaloo':
             hot = False
             shard_index = -2
-            ext_map = {'rgb': 'jpeg', 'segmentation': 'png', 'depth': 'png'}
+            ext_map = {'rgb': 'jpeg', 'segmentation': 'png', 'depth': 'png', 'normal': 'png'}
             blob_name = f'{run_id}/cameras/{camera}--{mode}/{timestamp:012d}unixus.{ext_map[mode]}'
             blob_client = self.sim_service.get_blob_client('images', blob_name)
         elif hot:
