@@ -18,7 +18,7 @@ parser.add_argument('--gpu', type=int, default=0)
 parser.add_argument('--batch_size', type=int, default=3)
 parser.add_argument('--start_index', type=int, default=0)
 if 'get_ipython' in dir(__builtins__):
-    args = parser.parse_args('clear-sea-254'.split(' '))
+    args = parser.parse_args('jolly-glade-289'.split(' '))
 else:
     args = parser.parse_args()
 # %%
@@ -34,14 +34,11 @@ runs = api.runs(path="wayve-ai/EPE", filters={"display_name": model_name})
 run = runs[0]
 # %%
 dataset_meta_path = '/mnt/remote/data/users/kacper/datasets/somers-town_weather_v1'
-data_root = '/mnt/remote/data/users/kacper/datasets'
 out_dir = '/home/kacper/data/out'
-video_test_path = f'{dataset_meta_path}/sim_files.csv'
 
-# sim_somers_town = '/home/kacper/code/EPE/datasets/somers_town/sim_files.csv'
-# sim_car_filter = lambda car: 'ningaloo' in car
-# path_filter = lambda x: '2022-10-26--10-48-33--somerstown-aft-loop-anti-clockwise-v1--1ceea0c3ea91f1ef--3955de33' in x 
-# path_filter = lambda x: True
+car = 'ningaloo--3_6_190--jaguaripacenoslipdynamics--ningaloo_av_2_0'
+data_root = dataset_meta_path
+video_test_path = os.path.join(dataset_meta_path, 'sim_files.csv')
 
 SAMPLING_RATE = 1
 start_index = 0
@@ -55,11 +52,20 @@ sim_data_modes = ['rgb', 'segmentation', *g_buffers]
 # gbuf_std = []
 
 gbuf_stats  = torch.load(os.path.join(dataset_meta_path, 'gbuf_stats.pt'))
+# %%
+print(gbuf_stats)
+# %%
+print([x.item() for x in list(gbuf_stats['gbuf_mean'])])
+print([x.item() for x in list(gbuf_stats['gbuf_std'])])
+# %%
 
 dataset_fake_val = SimDataset(ds.utils.read_azure_filelist(video_test_path,
     sim_data_modes), data_root=data_root, gbuffers=g_buffers, inference=True,
     gbuf_mean=gbuf_stats['gbuf_mean'], gbuf_std=gbuf_stats['gbuf_std'], 
     )
+# %%
+print(len(dataset_fake_val))
+# %%
 
 def seed_worker(id):
     random.seed(torch.initial_seed() % np.iinfo(np.int32).max)
@@ -83,9 +89,9 @@ for batch in loader_fake:
     break
 
 epe_batch = {}
-epe_batch['img'] = example_input['img']
-epe_batch['gbuffers'] = example_input['gbuffers']
-epe_batch['gt_labels'] = example_input['gt_labels']
+epe_batch['img'] = example_input['img'].to(device)
+epe_batch['gbuffers'] = example_input['gbuffers'].to(device)
+epe_batch['gt_labels'] = example_input['gt_labels'].to(device)
 
 
 # %%
@@ -111,7 +117,7 @@ artifact = api.artifact(f'wayve-ai/EPE/{model_name}:latest')
 assert artifact.logged_by().name == model_name
 artifact_save_path = '/home/kacper/code/EPE/wandb'
 weight_path = artifact.download(os.path.join(artifact_save_path, 'artifacts', model_name, artifact.version))
-weight_path = os.path.join(weight_path, 'gen-network.pth.tar')
+weight_path = os.path.join(weight_path, f'{model_name}_gen-network.pth.tar')
 
 # weights_name = 'gen-network.pth.tar' if iteration == 'latest' else f'{iteration}_gen-network.pth.tar'
 # weight_path = f'/home/kacper/data/EPE/weights/{model_name}/{weights_name}'
@@ -129,10 +135,12 @@ def _forward_generator_fake(batch_fake):
 # %%
 output = _forward_generator_fake(example_input.to(device))
 # %%
+to_pil(output['fake'][0])
+# %%
 to_pil(output['rec_fake'][0])
 # %%
-traced_script_module = torch.jit.trace(generator.to('cpu'), (epe_batch))
-# %%
+traced_script_module = torch.jit.trace(generator, (epe_batch))
+# %/tmp/ailib/requirements.txt%
 out = traced_script_module(epe_batch)
 # %%
 print(out.shape)
@@ -140,5 +148,14 @@ print(out.shape)
 to_pil(out[0])
 
 # %%
-traced_script_module.save("traced_epe_network.pt")
+jit_save_path = os.path.join(out_dir, model_name, f'{model_name}.pt')
+traced_script_module.save(jit_save_path)
+# %%
+m = torch.jit.load(jit_save_path)
+if m is not None:
+    print("saved properly")
+# %%
+out = m(epe_batch)
+print(out.shape)
+to_pil(out[0])
 # %%
