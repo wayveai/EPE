@@ -8,7 +8,7 @@ from tqdm import tqdm
 import os
 import random
 
-from epe.utils.dataset_collector import uniform_sampling
+from epe.utils.dataset_collector import uniform_sampling_dataset
 # %%
 
 g_buffers = ['depth', 'normal']
