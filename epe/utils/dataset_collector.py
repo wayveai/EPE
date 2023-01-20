@@ -69,11 +69,11 @@ if __name__ == '__main__':
     #             # rgb_path = f'{run_id}/cameras/front-forward--rgb/{timestamp}unixus.jpeg'
     #             f.write(f'{run_id},{timestamp}\n')
 # %%
-def uniform_sampling(files_csv_path, sampling_rate, start_index=0, data_root='/home/kacper/data/datasets', path_filter=lambda x: True, car_filter=lambda x: True):
+def uniform_sampling_dataset(files_csv_path, sampling_rate, start_index=0, data_root='/home/kacper/data/datasets', path_filter=lambda x: True, car_filter=lambda x: True):
     with open(files_csv_path, 'w') as f:
         print(data_root)
         for car in os.listdir(data_root):
-            if car_filter(car):
+            if car_filter(car) and os.path.isdir(os.path.join(data_root, car)):
                 for run in os.listdir(os.path.join(data_root, car)):
                     camera_path = os.path.join(data_root, car, run, 'cameras', 'front-forward--rgb')
                     if path_filter(camera_path):
@@ -82,6 +82,15 @@ def uniform_sampling(files_csv_path, sampling_rate, start_index=0, data_root='/h
                             run_id = os.path.join(car, run)
                             timestamp = re.search('\d+', img_name).group()
                             f.write(f'{run_id},{timestamp}\n')
+
+def uniform_sampling_run(files_csv_path, run_path, sampling_rate=1, start_index=0):
+    with open(files_csv_path, 'w') as f:
+        camera_path = os.path.join(run_path, 'cameras', 'front-forward--rgb')
+        img_names = sorted(os.listdir(camera_path))
+        for i, img_name in enumerate(img_names[start_index::sampling_rate]):
+            run_id = run_path.split('/')[-1]
+            timestamp = re.search('\d+', img_name).group()
+            f.write(f'{run_id},{timestamp}\n')
 
 
         
