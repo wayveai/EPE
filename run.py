@@ -86,7 +86,7 @@ class PassthruGenerator(torch.nn.Module):
 		pass
 
 	def forward(self, epe_batch):
-		return self.network(epe_batch)
+		return torch.sigmoid(self.network(epe_batch))
 
 
 class EPEExperiment(ee.GANExperiment):
