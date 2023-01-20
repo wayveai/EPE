@@ -36,7 +36,7 @@ if __name__ == '__main__':
     dim       = 512 # channel width of VGG-16 at relu 5-3
     num_crops = args.num_crops
 
-    dataset = ImageDataset(args.name, read_azure_filelist(args.img_list, ['rgb']), data_root=args.data_root)
+    dataset = ImageDataset(args.name, read_azure_filelist(args.img_list, ['rgb'], dataset_name=''), data_root=args.data_root)
     
     # compute mean/std
 
