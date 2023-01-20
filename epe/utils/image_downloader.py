@@ -7,7 +7,6 @@ from pyarrow.parquet import ParquetDataset
 import os
 from PIL import Image
 import numpy as np
-import cv2
 import json
 from IPython.display import display
 
