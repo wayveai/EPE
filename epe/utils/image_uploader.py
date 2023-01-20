@@ -203,28 +203,53 @@ class AzureImageLoader:
         blob_client = self.sim_service.get_blob_client('sim2real-image-translation', path)
         if not blob_client.exists():
             with open(upload_file_path, "rb") as data:
-                blob_client.upload_blob(data, overwrite=True)
+                try:
+                    blob_client.upload_blob(data, overwrite=False)
+                except:
+                    print('skipping')
+
+    def read_img(self, path, dataset_name, local_data_root='/mnt/remote/data/users/kacper/datasets'):
+        print(path)
+        print(local_data_root)
+        upload_file_path = os.path.join(local_data_root, path)
+        print('\n')
+        print(upload_file_path)
+        img =  Image.open(upload_file_path)
+        print(img.size)
+        path = os.path.join(path)
+
+        blob_client = self.sim_service.get_blob_client('sim2real-image-translation', path)
+        if not blob_client.exists():
+            with open(upload_file_path, "rb") as data:
+                try:
+                    blob_client.upload_blob(data, overwrite=False)
+                except:
+                    print('skipping')
 
 
 
 # %%
 loader = AzureImageLoader()
+dataset_name = 'urban-driving'
+dataset_root = '/home/kacper/data/datasets/urban-driving'
 
 def upload_files(files, dataset_name='somers-town_weather_v1'):
     # files: tuple of files to be uploaded (e.g. sharing timestamp)
     for ts in tqdm(files):
         for file in ts:
-            loader.upload_img(file, dataset_name=dataset_name)
-# # %%
-dataset_name = 'somers-town_weather_v1'
-# %%
-print('uploading sim')
-sim_files = read_azure_filelist('/mnt/remote/data/users/kacper/datasets/somers-town_weather_v1/sim_files.csv', ['rgb', 'depth', 'normal', 'segmentation', 'segmentation-mseg'], dataset_name=dataset_name)
-upload_files(sim_files)
+            # loader.upload_img(file, dataset_name=dataset_name, local_data_root=dataset_root)
+            loader.read_img(file, dataset_name=dataset_name, local_data_root='/home/kacper/data/datasets')
+        break
 
-# # %%
-# print('uploading real')
-# real_files = read_azure_filelist('/mnt/remote/data/users/kacper/datasets/somers-town_weather_v1/real_files.csv', ['rgb', 'segmentation-mseg'], dataset_name=dataset_name)
-# upload_files(real_files)
+# %%
+# print('uploading sim')
+sim_files = read_azure_filelist(os.path.join(dataset_root, 'sim_files.csv'), ['rgb', 'depth', 'normal', 'segmentation'], dataset_name=dataset_name)
+upload_files(sim_files, dataset_name=dataset_name)
+
+
+# %%
+print('uploading real')
+real_files = read_azure_filelist(os.path.join(dataset_root, 'real_files.csv'), ['rgb', 'segmentation'], dataset_name=dataset_name)
+upload_files(real_files, dataset_name=dataset_name)
 
 # %%
