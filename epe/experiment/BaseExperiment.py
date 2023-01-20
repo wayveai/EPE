@@ -319,9 +319,7 @@ class BaseExperiment:
 		self.unpin           = bool(common_cfg.get('unpin', False))
 		self.seed            = common_cfg.get('seed', None)
 		self.batch_size      = int(common_cfg.get('batch_size', 1))
-		# self.num_loaders     = int(common_cfg.get('num_loaders', 10))
-		# TODO: this is specific to azureml training
-		self.num_loaders     = os.cpu_count() // 8
+		self.num_loaders     = int(common_cfg.get('num_loaders', os.cpu_count() // torch.cuda.device_count() if torch.cuda.is_available() else 10))
 		self._log_interval   = int(common_cfg.get('log_interval', 1))
 
 		prof_cfg = dict(self.cfg.get('profile', {}))
