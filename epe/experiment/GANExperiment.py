@@ -154,12 +154,6 @@ class GANExperiment(BaseExperiment):
 
 		self.wandb_run.log_artifact(artifact)
 
-		print('*'*80)
-		print('saved to:')
-		print(self.weight_dir)
-		quit()
-
-
 	def _load_model(self):
 		""" Load a generator and a discriminator with networks states each from file. """
 		
