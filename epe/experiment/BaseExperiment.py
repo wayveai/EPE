@@ -3,6 +3,7 @@ import logging
 import random
 from pathlib import Path
 import sys
+import os
 
 import numpy as np
 from scipy.io import savemat
@@ -318,7 +319,9 @@ class BaseExperiment:
 		self.unpin           = bool(common_cfg.get('unpin', False))
 		self.seed            = common_cfg.get('seed', None)
 		self.batch_size      = int(common_cfg.get('batch_size', 1))
-		self.num_loaders     = int(common_cfg.get('num_loaders', 10))
+		# self.num_loaders     = int(common_cfg.get('num_loaders', 10))
+		# TODO: this is specific to azureml training
+		self.num_loaders     = os.cpu_count() // 8
 		self._log_interval   = int(common_cfg.get('log_interval', 1))
 
 		prof_cfg = dict(self.cfg.get('profile', {}))
