@@ -10,9 +10,36 @@ import os
 
 logger = logging.getLogger('epe.dataset.utils')
 
+class Frame():
+	def __init__(self, run_id, timestamp, camera_id='front-forward'):
+		self.run_id = run_id
+        self.timestamp = timestamp
+        self.camera_id = camera_id
+	
+	def __hash__(self) -> int:
+		return hash((self.run_id, self.timestamp, self.camera_id))
+
+def read_filelist(filelist_path):
+	frames = []
+	with open(filelist_path) as file:
+		for i, line in enumerate(file):
+			t = line.strip().split(',')
+			if len(t) == 2:
+				run_id = t[0]
+				timestamp = t[1]
+				frame = Frame(run_id, timestamp)
+			elif len(t) == 3:
+				run_id = t[0]
+				camera_id = t[1]
+				timestamp = t[2]
+				frame = Frame(run_id, timestamp, camera_id)
+			else:
+				raise IOError()
+			frames.append(frame)
+	return frames
+
 def read_azure_filelist(path_to_filelist, modes=['rgb'], dataset_name='urban-driving', is_sim=None, camera_id='front-forward'):
 	paths = []
-	counter = 0
 	with open(path_to_filelist) as file:
 		for i, line in enumerate(file):
 			t = line.strip().split(',')
@@ -41,46 +68,6 @@ def read_azure_filelist(path_to_filelist, modes=['rgb'], dataset_name='urban-dri
 
 			paths.append(tuple(ps))
 	return paths
-
-
-def read_filelist(path_to_filelist, num_expected_entries_per_row, check_if_exists=True):
-	""" Loads a file with paths to multiple files per row.
-
-	path_to_filelist -- path to text file
-	num_expected_entries_per_row -- number of expected entries per row.
-	check_if_exists -- checks each path.
-	"""
-
-	paths = []
-	num_skipped = 0
-	with open(path_to_filelist) as file:
-		for i, line in enumerate(file):
-			t = line.strip().split(',')
-			assert len(t) >= num_expected_entries_per_row, \
-				f'Expected at least {num_expected_entries_per_row} entries per line. Got {len(t)} instead in line {i} of {path_to_filelist}.'
-
-			ps = [Path(p) for p in t[:num_expected_entries_per_row]]
-
-			if check_if_exists:
-				skip = [p for p in ps if not p.exists()]
-				if skip:
-					num_skipped += 1
-					# logger.warn(f'Skipping {i}: {skip[0]} does not exist.')
-					continue
-					# assert p.exists(), f'Path {p} does not exist.'
-					
-					pass
-				pass
-
-			paths.append(tuple(ps))
-			pass
-		pass
-
-	if num_skipped > 0:
-		logger.warn(f'Skipped {num_skipped} entries since at least one file was missing.')
-
-	return paths
-
 
 def load_crops(path):
 	""" Load crop info from a csv file.
