@@ -24,25 +24,25 @@ class Batch:
         raise NotImplementedError
 
 class ImageBatch(Batch):
-    """ Augment an image tensor with identifying info like path and crop coordinates. 
+    """ Augment an image tensor with identifying info like frame and crop coordinates. 
 
     img  -- RGB image
-    path -- Path to image
-    coords -- Crop coordinates representing the patch stored in img and taken from the path.
+    frame -- frame to image
+    coords -- Crop coordinates representing the patch stored in img and taken from the frame.
 
     The coords are used for keeping track of the image position for cropping. If we load an image
     and crop part of it, we want to still be able to compute the correct coordinates for the original
     image. That's why we store the coordinates used for cropping (top y, bottom y, left x, right x).
     """
 
-    def __init__(self, img, path=None, coords=None):
+    def __init__(self, img, frame=None, coords=None):
         self.img      = _safe_expand(img)
-        self.path     = path
+        self.frame     = frame
         self._coords  = (0, img.shape[-2], 0, img.shape[-1]) if coords is None else coords
         pass
 
     def to(self, device):
-        return ImageBatch(_safe_to(self.img, device), path=self.path)
+        return ImageBatch(_safe_to(self.img, device), frame=self.frame)
 
     def _make_new_crop_coords(self, r0, r1, c0, c1):
         return (self._coords[0]+r0, self._coords[0]+r1, self._coords[2]+c0, self._coords[2]+c1)
@@ -50,29 +50,29 @@ class ImageBatch(Batch):
     def crop(self, r0, r1, c0, c1):
         """ Return cropped patch from image tensor(s). """
         coords = self._make_new_crop_coords(r0, r1, c0, c1)
-        return ImageBatch(self.img[:,:,r0:r1,c0:c1], path=self.path, coords=coords)
+        return ImageBatch(self.img[:,:,r0:r1,c0:c1], frame=self.frame, coords=coords)
 
     @classmethod
     def collate_fn(cls, samples):
         imgs          = _safe_cat([s.img for s in samples], 0)
-        paths         = [s.path for s in samples]
-        return ImageBatch(imgs, path=paths)
+        frames         = [s.frame for s in samples]
+        return ImageBatch(imgs, frame=frames)
     pass
 
 
 class EPEBatch(ImageBatch):
-    def __init__(self, img, gbuffers=None, gt_labels=None, robust_labels=None, path=None, coords=None):
+    def __init__(self, img, gbuffers=None, gt_labels=None, robust_labels=None, frame=None, coords=None):
         """ Collect all input info for a network.
 
         img           -- RGB image
         gbuffers      -- multi-channel image with additional scene info (e.g., depth, surface normals, albedo)
         gt_labels     -- semantic segmentation provided by synthetic dataset
         robust_labels -- semantic segmentation by robust pretrained method (e.g., MSeg)		
-        path          -- Path to image
+        frame          -- frame to image
         coords        -- Crop coordinates that represent the image patch.
         """
 
-        super(EPEBatch, self).__init__(img, path, coords)
+        super(EPEBatch, self).__init__(img, frame, coords)
 
         self.gt_labels     = _safe_expand(gt_labels)
         self.gbuffers      = _safe_expand(gbuffers)
@@ -89,7 +89,7 @@ class EPEBatch(ImageBatch):
         return EPEBatch(_safe_to(self.img, device), 
             gbuffers=_safe_to(self.gbuffers, device), 
             gt_labels=_safe_to(self.gt_labels, device),
-            robust_labels=_safe_to(self.robust_labels, device), path=self.path)
+            robust_labels=_safe_to(self.robust_labels, device), frame=self.frame)
 
     def __getitem__(self, arg):
         epe_batch = {}
@@ -128,7 +128,7 @@ class EPEBatch(ImageBatch):
         coords        = self._make_new_crop_coords(r0, r1, c0, c1)
         return EPEBatch(self.img[:,:,r0:r1,c0:c1], \
             gbuffers=gbuffers, gt_labels=gt_labels, robust_labels=robust_labels, 
-            path=self.path, coords=coords)
+            frame=self.frame, coords=coords)
 
     @classmethod
     def collate_fn(cls, samples):
@@ -136,9 +136,9 @@ class EPEBatch(ImageBatch):
         gbuffers      = _safe_cat([s.gbuffers for s in samples], 0)
         robust_labels = _safe_cat([s.robust_labels for s in samples], 0)
         gt_labels     = _safe_cat([s.gt_labels for s in samples], 0)
-        paths         = [s.path for s in samples]
+        frames         = [s.frame for s in samples]
         return EPEBatch(imgs, gbuffers=gbuffers, gt_labels=gt_labels, robust_labels=robust_labels, 
-            path=paths)
+            frame=frames)
     pass
 
 

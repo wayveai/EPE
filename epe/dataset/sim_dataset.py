@@ -12,12 +12,14 @@ import random
 from tqdm import tqdm
 from torchvision.transforms import Resize
 
-
 from .batch_types import EPEBatch
 from .synthetic import SyntheticDataset
-from .utils import mat2tensor, normalize_dim
+from .utils import mat2tensor, Frame
 
-from .image_conversion import normal_to_normalised_normal, np_inverse_depth_invm_to_depth_m_normalized, np_inverse_depth_normalized_to_depth_m
+from .image_conversion import normal_to_normalised_normal, np_inverse_depth_invm_to_depth_m
+
+from wayve.ai.lib.data import fetch_label, fetch_image
+from wayve.ai.lib import undistort
 
 def center(x, m, s):
 	for i in range(x.shape[0]):
@@ -46,19 +48,10 @@ def material_from_gt_label(gt_labelmap):
 
 
 class SimDataset(SyntheticDataset):
-	def __init__(self, paths, transform=None, gbuffers='fake', data_root='', shape=(600, 960), inference=False,
+	def __init__(self, frames, transform=None, gbuffers='fake', data_root='', shape=(600, 960), inference=False,
 				gbuf_mean=None,
-				gbuf_std=None):
-		"""
-
-
-		# Note that last arguments will be gbuffer PATHS! to allow for flexibility
-		paths -- list of tuples with (img_path, robust_label_path, gt_label_path, gbuffer_paths)
-		"""
-
-		super(SimDataset, self).__init__('GTA')
-
-		# assert gbuffers in ['all', 'img', 'no_light', 'geometry', 'fake', 'depth']
+				gbuf_std=None, crop_undistortions=True):
+		super(SimDataset, self).__init__('SIM')
 
 		self.transform = transform
 		self.gbuffers  = gbuffers
@@ -66,27 +59,43 @@ class SimDataset(SyntheticDataset):
 		self.shape = shape
 		self.inference = inference
 
-		# self.shader    = class_type
-
-		self._paths    = paths
-		self._path2id  = {p[0]:i for i,p in enumerate(self._paths)}
-		if self._log.isEnabledFor(logging.DEBUG):
-			self._log.debug(f'Mapping paths to dataset IDs (showing first 30 entries):')
-			for i,(k,v) in zip(range(30),self._path2id.items()):
-				self._log.debug(f'path2id[{k}] = {v}')
-				pass
-			pass
+		self._frames    = frames
+		self._frame2id  = {f:i for i,f in enumerate(self._frames)}
 
 		self.azure_loader = AzureImageLoader()
 
-		self._log.info(f'Found {len(self._paths)} samples.')
+		self._log.info(f'Found {len(self._frames)} samples.')
 
 		self.resize = Resize(self.shape)
 
 		self.gbuf_mean = gbuf_mean
 		self.gbuf_std = gbuf_std
+		self.gbuffer_loaders = {'normal': self.load_normal, 'depth': self.load_depth}
 
+		self.crop_undistortions = crop_undistortions
+		self.coords = (72, shape[0] - 72, 0, shape[1]) if crop_undistortions else None
 
+		self.order = 'hwc'
+
+		# Hard coding sim distortion parameters as they are constant
+		intrinsics=np.array([[1.13407e+03,0.00000e+00,1.02016e+03],
+         [0.00000e+00,1.13520e+03,6.40390e+02],
+         [0.00000e+00,0.00000e+00,1.00000e+00]], dtype=np.float32)
+
+		distortion=np.array([-0.03952656, 0.0064852 ,-0.02202639, 0.00956348, 0.
+		, 0, 0, 0, 0, 0, 0.  , 0, 0, 0, 2], dtype=np.float32)
+
+		outrinsics = np.array([[360., 0., 480],
+                   [  0., 360., 300],
+                   [  0.,   0.,   1.]], dtype=np.float32)
+
+		outrinsics = np.expand_dims(outrinsics, 0)
+		intrinsics = np.expand_dims(intrinsics, 0)
+		distortion = np.expand_dims(distortion, 0)
+
+		self.intrinsics = torch.tensor(intrinsics)
+		self.outrinsics = torch.tensor(outrinsics)
+		self.distortion = torch.tensor(distortion)
 
 
 
@@ -98,15 +107,11 @@ class SimDataset(SyntheticDataset):
 			channels += {'depth': 1, 'normal':3}[buffer]
 
 		return channels
-		# return {'fake':32, 'all':26, 'img':0, 'no_light':17, 'geometry':8, 'depth': 1}[self.gbuffers]
-
 
 	@property
 	def num_classes(self):
 		""" Number of classes in the semantic segmentation maps."""
 		return 12
-		# return {'fake':12, 'all':12, 'img':0, 'no_light':0, 'geometry':0, 'depth': 12}[self.gbuffers]
-
 
 	@property
 	def cls2gbuf(self):
@@ -117,9 +122,8 @@ class SimDataset(SyntheticDataset):
 		else:
 			return {}
 
-
 	def get_id(self, img_filename):
-		return self._path2id.get(img_filename)
+		return self._frame2id.get(img_filename)
 
 	def load_file(self, path):
 		local_path = os.path.join(self.data_root, path)
@@ -136,58 +140,79 @@ class SimDataset(SyntheticDataset):
 		return img
 
 
+	def load_normal(self, frame):
+		normal = fetch_label(run_id=frame.run_id, camera=frame.camera_id,
+		timestamp=frame.timestamp, label_type='normal', image_source='sim')
+		normal = normal.astype(np.float32)
+		normal = normal[:, :, :3]
+		normal = normal_to_normalised_normal(normal)
+		normal = np.transpose(normal, (2, 0, 1))
+		return normal
+	
+	def load_depth(self, frame):
+		depth = fetch_label(run_id=frame.run_id, camera=frame.camera_id,
+        timestamp=frame.timestamp, label_type='depth', image_source='sim')
+		print(depth.max(), depth.min(), depth.dtype)
+		# TODO check dtype
+		depth = np_inverse_depth_invm_to_depth_m(depth)
+		depth = np.transpose(depth, (2, 0, 1))
+		return depth
+
+	def load_segmentation(self, frame):
+		return fetch_label(run_id=frame.run_id, camera=frame.camera_id,
+        timestamp=frame.timestamp, label_type='segmentation', image_source='sim')
+
+	def load_image(self, frame):
+		# load image
+		img = fetch_image(run_id=frame.run_id, camera=frame.camera_id,
+		timestamp=frame.timestamp, image_source='sim', order=self.order)
+		img = img.astype(np.float32) / 255.0
+		img = mat2tensor(img)
+
+		# undistort
+		img = img.unsqueeze(0)
+		img = undistort(img, intrinsics=self.intrinsics, distortion=self.distortion, outrinsics=self.outrinsics)
+		img = img.squeeze()
+		img = img[:, :self.shape[0], :self.shape[1]]
+
+		return img
+
+	def crop(self, x):
+		if x is None:
+			return None
+		return x[:, 72:-72]
+
 	def __getitem__(self, index):
-		# TODO: check if either local or azure file exists, else skip
-
 		index  = index % self.__len__()
-		if self.inference:
-			# for inference we only need rgb and g-buffers
-			img_path, gt_label_path = self._paths[index][:2]
-			g_buffer_paths = self._paths[index][2:]
-		else:
-			img_path, gt_label_path, robust_label_path = self._paths[index][:3]
-			g_buffer_paths = self._paths[index][3:]
+		frame = self._frames[index]
 
-		g_data = []
-		for g_buffer_path in g_buffer_paths:
-			buffer = self.load_file(g_buffer_path)
-			if '--depth' in g_buffer_path:
-				buffer = np.array(buffer, dtype=np.uint16)
-				buffer = np_inverse_depth_normalized_to_depth_m(buffer)
-				buffer = np.expand_dims(buffer, axis=-1)
-				# buffer = (np.clip(buffer, 0, max_depth_m) / max_depth_m) * 2 - 1
-			if '--normal' in g_buffer_path:
-				# only take RGB from RGBA surface normal encoding
-				buffer = buffer[:, :, :3]
-				buffer = normal_to_normalised_normal(buffer)
+		img = self.load_image(frame)
 
-			buffer = np.transpose(buffer, (2, 0, 1))
-			g_data.append(buffer)
-		# TODO Double check the dimensions of this
-		g_data = np.concatenate(g_data)
+		gbuffers = [self.gbuffer_loaders[g](frame) for g in self.gbuffers]
+		gbuffers = np.concatenate(gbuffers, axis=0)
+		gbuffers = torch.from_numpy(gbuffers.astype(np.float32)).float()
 
-		img = mat2tensor(self.load_file(img_path).astype(np.float32) / 255.0)
-		# img = self.resize(img)
-		gbuffers = torch.from_numpy(g_data.astype(np.float32)).float()
-		gt_labels = mat2tensor(material_from_gt_label(self.load_file(gt_label_path)))
+		segmentation = self.load_segmentation(frame)
+		gt_labels = mat2tensor(material_from_gt_label(segmentation))
 
 		if gt_labels is not None and torch.max(gt_labels) > 128:
 			gt_labels = gt_labels / 255.0
-			pass
 
 		robust_labels = None
 		if not self.inference:
-
-			robust_labels = self.load_file(robust_label_path)
+			robust_labels = segmentation
 			robust_labels = torch.LongTensor(robust_labels[:,:]).unsqueeze(0)
 
 		if self.gbuf_mean is not None:
 			gbuffers = center(gbuffers, self.gbuf_mean, self.gbuf_std)
-			pass
 
+		if self.crop_undistortions:
+			img = self.crop(img)
+			gbuffers = self.crop(gbuffers)
+			gt_labels = self.crop(gt_labels)
+			robust_labels = self.crop(robust_labels)
 
-		return EPEBatch(img, gbuffers=gbuffers, gt_labels=gt_labels, robust_labels=robust_labels, path=img_path, coords=None)
-
+		return EPEBatch(img, gbuffers=gbuffers, gt_labels=gt_labels, robust_labels=robust_labels, frame=frame)
 
 	def __len__(self):
-		return len(self._paths)
+		return len(self._frames)
