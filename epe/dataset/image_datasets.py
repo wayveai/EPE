@@ -1,8 +1,6 @@
 import logging
 import os
-from pathlib import Path
 import random
-from turtle import shape
 
 import imageio
 import numpy as np
@@ -12,78 +10,81 @@ import torch.utils.data
 
 from .batch_types import ImageBatch
 from .utils import mat2tensor
-from epe.dataset.azure_loader import AzureImageLoader
-from torchvision.transforms import Resize
+from wayve.ai.lib import undistort
+from wayve.ai.lib.data import load_camera_calibrations
+from wayve.ai.lib.data import fetch_image
 
 logger = logging.getLogger(__file__)
 
 class ImageDataset(torch.utils.data.Dataset):
-	def __init__(self, name, img_paths, transform=None, shape=(600, 960), data_root=''):
+	def __init__(self, name, frames, transform=None, shape=(600, 960), data_root=''):
 		"""
 
 		name -- Name used for debugging, log messages.
-		img_paths - an iterable of paths to individual image files. Only JPG and PNG files will be taken.
+		frames - list of frames to load.
 		transform -- Transform to be applied to images during loading.
 		"""
 
-		img_paths  = [Path(p[0] if type(p) is tuple else p) for p in img_paths]
-		self.paths = sorted([p for p in img_paths if p.suffix in ['.jpg', '.jpeg', '.png']])
+		self.frames = frames
 		
-		self._path2id    = {p.stem:i for i,p in enumerate(self.paths)}
+		self.frame2id  = {f:i for i,f in enumerate(self.frames)}
 		self.transform   = transform
 
-		self.azure_loader = AzureImageLoader()
 		self.shape = shape
 		
 		self.name = name
 		self._log = logging.getLogger(f'epe.dataset.{name}')
-		self._log.info(f'Found {len(self.paths)} images.')
+		self._log.info(f'Found {len(self.frames)} images.')
 		self.data_root = data_root
 
-		self.resize = Resize(shape)
-		pass
+	def _load_img(self, frame):
+		img = fetch_image(run_id=frame.run_id, camera=frame.camera_id, timestamp=frame.timestamp, order='hwc')
+		calibration = load_camera_calibrations(
+			run_id=frame.run_id,
+			camera_names=(frame.camera_id,),
+		)
+
+		img = torch.Tensor(np.moveaxis(img, 2, 0))
+		# undistort currently only works on batches of imgs
+		img = img.unsqueeze(0)
+
+		outrinsics = torch.tensor(
+		[
+			[360, 0, 480],
+			[0, 360, 300],
+			[0, 0.0, 1.0],
+		]
+		).broadcast_to(1, 3, 3)
+
+		img = undistort(img, intrinsics=torch.Tensor(calibration.intrinsics), distortion=torch.Tensor(calibration.distortion), outrinsics=outrinsics)
+
+		img = img[:, :, :600, :960]
+		img = img[:, :, 76:76+448, :960]
+
+		# format back for dispay
+		img = img[0].numpy()
+		img = np.moveaxis(img, 0, 2).astype(np.float32) / 255.0
+		return img
 
 
-	def _load_img(self, path):
-		path = str(path)
-		try:
-			local_path = os.path.join(self.data_root, path)
-			if os.path.exists(local_path):
-				path = local_path
-				img = imageio.imread(path).astype(np.float32)
-
-			else:
-				img = np.array(self.azure_loader.load_img_from_path(path))
-			# if len(img.shape) == 2:
-			# 	img = np.expand_dims(img, 2)
-			if '.jpeg' in path or '.jpg' in path:
-				img = np.clip(img / 255.0, 0.0, 1.0)
-			return img
-		except:
-			logging.exception(f'Failed to load {path}.')
-			raise
-		pass
-
-
-	def get_id(self, path):
-		return self._path2id.get(Path(path))
-
+	def get_id(self, frame):
+		return self.frame2id.get(frame)
 
 	def __getitem__(self, index):
 		
 		idx  = index % self.__len__()
-		path = self.paths[idx]
-		img  = self._load_img(path)
+		frame = self.frames[idx]
+		img  = self._load_img(frame)
 
 		if self.transform is not None:
 			img = self.transform(img)
 			pass
 
-		img = mat2tensor(img)   
-		# TODO: reformat for a cleaner way of resizing images when loading
-		# img = self.resize(img)
-		return ImageBatch(img, path)
+		img = mat2tensor(img)
+
+		return ImageBatch(img, frame=frame)
 
 
 	def __len__(self):
-		return len(self.paths)
+		return len(self.frames)
+

@@ -183,10 +183,10 @@ class EPEExperiment(ee.GANExperiment):
 
 		# training
 		if self.action == 'train':
-			source_dataset = fake_datasets[self.fake_name](ds.utils.read_azure_filelist(self.fake_train_path,
+			source_dataset = fake_datasets[self.fake_name](ds.utils.read_filelist(self.fake_train_path,
 							sim_data_modes, dataset_name=self.fake_dataset_name), data_root=sim_data_root, gbuffers=g_buffers, gbuf_mean=gbuf_stats['gbuf_mean'], gbuf_std=gbuf_stats['gbuf_std'])
 			self.dataset_fake = source_dataset
-			target_dataset = ds.RobustlyLabeledDataset(self.real_name, ds.utils.read_azure_filelist(self.real_basepath, real_data_modes, dataset_name=self.real_dataset_name), data_root=real_data_root)
+			target_dataset = ds.RobustlyLabeledDataset(self.real_name, ds.utils.read_filelist(self.real_basepath, real_data_modes, dataset_name=self.real_dataset_name), data_root=real_data_root)
 
 			if self.sampling == 'matching':
 				self.dataset_train = MatchedCrops(source_dataset, target_dataset, self.sample_cfg, self.fake_dataset_name, self.real_dataset_name)
@@ -206,12 +206,12 @@ class EPEExperiment(ee.GANExperiment):
 		elif self.action == 'test':
 			# TODO: add dataset mean and std 
 			self.dataset_fake_val = \
-			fake_datasets[self.fake_name](ds.utils.read_azure_filelist(self.fake_test_path,
+			fake_datasets[self.fake_name](ds.utils.read_filelist(self.fake_test_path,
 				sim_data_modes), data_root=sim_data_root, gbuffers=g_buffers,
 				gbuf_mean=gbuf_stats['gbuf_mean'],
 				gbuf_std=gbuf_stats['gbuf_std'])
 		else:
-			self.dataset_fake_val = fake_datasets[self.fake_name](ds.utils.read_azure_filelist(self.fake_val_path, sim_data_modes),
+			self.dataset_fake_val = fake_datasets[self.fake_name](ds.utils.read_filelist(self.fake_val_path, sim_data_modes),
 				data_root=sim_data_root, gbuffers=g_buffers,
 				gbuf_mean=gbuf_stats['gbuf_mean'], gbuf_std=gbuf_stats['gbuf_std'])
 			pass

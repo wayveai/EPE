@@ -9,7 +9,7 @@ import torch
 from torchvision.utils import make_grid
 
 from epe.dataset import ImageBatch, ImageDataset
-from epe.dataset.utils import read_azure_filelist, read_filelist
+from epe.dataset.utils import read_filelist
 
 # for each threshold,
 # find a couple of samples
@@ -41,8 +41,8 @@ if __name__ == '__main__':
 	p.add_argument('--data_root', type=Path, help="Where to find local images", default='')
 	args = p.parse_args()
 
-	src_dataset = ImageDataset('src', read_azure_filelist(args.src_img_path, ['rgb']), data_root=args.data_root)
-	dst_dataset = ImageDataset('dst', read_azure_filelist(args.dst_img_path, ['rgb']), data_root=args.data_root)
+	src_dataset = ImageDataset('src', read_filelist(args.src_img_path, ['rgb']), data_root=args.data_root)
+	dst_dataset = ImageDataset('dst', read_filelist(args.dst_img_path, ['rgb']), data_root=args.data_root)
 
 	data = np.load(args.match_path)
 	s = data['dist']#[:,0]

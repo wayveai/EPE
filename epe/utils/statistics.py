@@ -25,7 +25,7 @@ fake_path = os.path.join(dataset_meta_path, 'sim_files.csv')
 
 
 # validation
-dataset_fake = SimDataset(ds.utils.read_azure_filelist(fake_path, sim_data_modes), data_root=data_root, gbuffers=g_buffers)
+dataset_fake = SimDataset(ds.utils.read_filelist(fake_path, sim_data_modes), data_root=data_root, gbuffers=g_buffers)
 
 def compute_gbuffer_statistics(ds):
     indices = list(range(len(ds)))

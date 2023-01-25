@@ -87,7 +87,7 @@ sim_data_modes = ['rgb', 'segmentation', *g_buffers]
 
 gbuf_stats  = torch.load(os.path.join(dataset_meta_path, 'gbuf_stats.pt'))
 
-dataset_fake_val = SimDataset(ds.utils.read_azure_filelist(video_test_path,
+dataset_fake_val = SimDataset(ds.utils.read_filelist(video_test_path,
 	sim_data_modes, dataset_name='', is_sim=True), data_root=data_root, gbuffers=g_buffers, inference=True,
 	gbuf_mean=gbuf_stats['gbuf_mean'], gbuf_std=gbuf_stats['gbuf_std'])
 

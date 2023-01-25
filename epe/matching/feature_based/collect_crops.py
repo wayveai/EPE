@@ -8,7 +8,7 @@ from tqdm import tqdm
 import torchvision
 
 from epe.dataset import ImageBatch, ImageDataset
-from epe.dataset.utils import read_filelist, read_azure_filelist
+from epe.dataset.utils import read_filelist
 from epe.network import VGG16
 
 
@@ -27,7 +27,6 @@ if __name__ == '__main__':
     parser.add_argument('-n', '--num_loaders', type=int, default=1)
     parser.add_argument('-c', '--num_crops', type=int, help="Number of crops to sample per image. Default = 15.", default=15)
     parser.add_argument('--out_dir', type=Path, help="Where to store the crop info.", default='.')
-    parser.add_argument('--data_root', type=Path, help="Where to find local images", default='')
     args = parser.parse_args()
 
     network   = VGG16(False, padding='none').to(device)
@@ -36,7 +35,7 @@ if __name__ == '__main__':
     dim       = 512 # channel width of VGG-16 at relu 5-3
     num_crops = args.num_crops
 
-    dataset = ImageDataset(args.name, read_azure_filelist(args.img_list, ['rgb'], dataset_name=''), data_root=args.data_root)
+    dataset = ImageDataset(args.name, read_filelist(args.img_list))
     
     # compute mean/std
 

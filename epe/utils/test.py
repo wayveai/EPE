@@ -31,5 +31,4 @@ normal = to_pil_image(x.gbuffers[0, 1:])
 # %%
 # permute x.gbuffers from cwh to hwc
 Image.blend(rgb, normal, 0.2)
-
 # %%

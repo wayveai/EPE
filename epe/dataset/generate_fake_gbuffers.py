@@ -7,7 +7,7 @@ import torch.utils.data
 from tqdm import tqdm
 
 from epe.dataset import ImageBatch, ImageDataset
-from epe.dataset.utils import read_azure_filelist, read_filelist
+from epe.dataset.utils import read_filelist
 from epe.network import VGG16
 
 
@@ -39,7 +39,7 @@ Instead of these fake G-buffers generated from images, we strongly recommend ext
     crop_size = 196 # VGG-16 receptive field at relu 5-3
     dim       = 512 # channel width of VGG-16 at relu 5-3
 
-    dataset = ImageDataset(args.name, read_azure_filelist(args.img_list, ['rgb']), data_root=args.data_root)
+    dataset = ImageDataset(args.name, read_filelist(args.img_list, ['rgb']), data_root=args.data_root)
 
     # compute mean/std
 

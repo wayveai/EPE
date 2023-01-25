@@ -59,7 +59,7 @@ print([x.item() for x in list(gbuf_stats['gbuf_mean'])])
 print([x.item() for x in list(gbuf_stats['gbuf_std'])])
 # %%
 
-dataset_fake_val = SimDataset(ds.utils.read_azure_filelist(video_test_path,
+dataset_fake_val = SimDataset(ds.utils.read_filelist(video_test_path,
     sim_data_modes), data_root=data_root, gbuffers=g_buffers, inference=True,
     gbuf_mean=gbuf_stats['gbuf_mean'], gbuf_std=gbuf_stats['gbuf_std'], 
     )
