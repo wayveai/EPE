@@ -6,7 +6,6 @@ import numpy as np
 from skimage.transform import resize
 import scipy.io as sio
 import torch
-from epe.dataset.azure_loader import AzureImageLoader
 import os
 import random
 from tqdm import tqdm
@@ -61,8 +60,6 @@ class SimDataset(SyntheticDataset):
 
 		self._frames    = frames
 		self._frame2id  = {f:i for i,f in enumerate(self._frames)}
-
-		self.azure_loader = AzureImageLoader()
 
 		self._log.info(f'Found {len(self._frames)} samples.')
 
@@ -124,20 +121,6 @@ class SimDataset(SyntheticDataset):
 
 	def get_id(self, img_filename):
 		return self._frame2id.get(img_filename)
-
-	def load_file(self, path):
-		local_path = os.path.join(self.data_root, path)
-		if os.path.exists(local_path):
-			img = imageio.imread(local_path)
-
-			if '--depth' in local_path:
-				img = img.astype(np.uint16)
-			else:
-				img = img.astype(np.float32)
-		else:
-			img = np.array(self.azure_loader.load_img_from_path(path))
-
-		return img
 
 
 	def load_normal(self, frame):
