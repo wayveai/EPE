@@ -11,4 +11,4 @@ echo "filter done" >> /home/kacper/progress
 
 
 python epe/matching/compute_weights.py /home/kacper/code/EPE/datasets/urban-driving/matched_crops_sim-real.csv 456 960 /home/kacper/code/EPE/datasets/urban-driving/crop_weights_sim-real.npz
-echo "weights coimputed" >> /home/kacper/progress
+echo "weights computed" >> /home/kacper/progress
