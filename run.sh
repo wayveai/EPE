@@ -1,6 +1,6 @@
 LOG_PATH=crops_progress_los.txt
 touch $LOG_PATH
-echo "" > $LOG_PATH
+echo "starting" > $LOG_PATH
 python epe/matching/feature_based/collect_crops.py sim /home/kacper/code/EPE/datasets/urban-driving/sim_files.csv --out_dir /home/kacper/code/EPE/datasets/urban-driving && echo "sim crops collected" >> $LOG_PATH
 python epe/matching/feature_based/collect_crops.py real /home/kacper/code/EPE/datasets/urban-driving/real_files.csv --out_dir  /home/kacper/code/EPE/datasets/urban-driving && echo "real crops collected" >> $LOG_PATH
 
