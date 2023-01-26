@@ -7,7 +7,7 @@ import torch.utils.data
 from tqdm import tqdm
 import torchvision
 
-from epe.dataset import ImageBatch, ImageDataset
+from epe.dataset import ImageBatch, ImageDataset, SimDataset
 from epe.dataset.utils import read_filelist
 from epe.network import VGG16
 
@@ -35,7 +35,14 @@ if __name__ == '__main__':
     dim       = 512 # channel width of VGG-16 at relu 5-3
     num_crops = args.num_crops
 
-    dataset = ImageDataset(args.name, read_filelist(args.img_list))
+    print('DATASET NAME: ', args.name)
+    if args.name == 'real':
+        dataset = ImageDataset(args.name, read_filelist(args.img_list))
+    elif args.name == 'sim':
+        dataset = SimDataset(read_filelist(args.img_list), just_image=True)
+    else:
+        raise IOError('dataset name not supported. use sim or real')
+
     
     # compute mean/std
 
@@ -46,7 +53,8 @@ if __name__ == '__main__':
     print('Computing mean/std...')
 
     m, s = [], []
-    for i, batch in tqdm(zip(range(1000), loader), total=min(len(loader), 1000)):
+    num_samples = 1000
+    for i, batch in tqdm(zip(range(num_samples), loader), total=min(len(loader), num_samples)):
         m.append(batch.img.mean(dim=(2,3)))
         s.append(batch.img.std(dim=(2,3)))
         pass
@@ -67,7 +75,7 @@ if __name__ == '__main__':
 
     ip = 0
     with open(args.out_dir / f'crop_{args.name}.csv', 'w') as log:
-        log.write('id,path,r0,r1,c0,c1\n')
+        log.write('id,run_id,camera,ts,r0,r1,c0,c1\n')
         with torch.no_grad():
             for i, batch in enumerate(tqdm(loader)):
                 
@@ -88,7 +96,7 @@ if __name__ == '__main__':
                     r1 = r0 + crop_size
                     c1 = c0 + crop_size
                     samples.append(batch.img[0,:,r0:r1,c0:c1].reshape(1,3,crop_size,crop_size))
-                    log.write(f'{ip},{batch.path[0]},{r0},{r1},{c0},{c1}\n')
+                    log.write(f'{ip},{batch.frame[0].run_id},{batch.frame[0].camera_id},{batch.frame[0].timestamp},{r0},{r1},{c0},{c1}\n')
                     ip += 1
                     pass
 

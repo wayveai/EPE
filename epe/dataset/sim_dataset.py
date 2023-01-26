@@ -11,7 +11,7 @@ import random
 from tqdm import tqdm
 from torchvision.transforms import Resize
 
-from .batch_types import EPEBatch
+from .batch_types import EPEBatch,ImageBatch
 from .synthetic import SyntheticDataset
 from .utils import mat2tensor, Frame
 
@@ -47,7 +47,7 @@ def material_from_gt_label(gt_labelmap):
 
 
 class SimDataset(SyntheticDataset):
-	def __init__(self, frames, transform=None, gbuffers='fake', data_root='', shape=(600, 960), inference=False,
+	def __init__(self, frames, transform=None, gbuffers='fake', data_root='', shape=(600, 960), just_image=False, inference=False,
 				gbuf_mean=None,
 				gbuf_std=None, crop_undistortions=True):
 		super(SimDataset, self).__init__('SIM')
@@ -71,6 +71,8 @@ class SimDataset(SyntheticDataset):
 
 		self.crop_undistortions = crop_undistortions
 		self.coords = (72, shape[0] - 72, 0, shape[1]) if crop_undistortions else None
+
+		self.just_image = just_image
 
 		self.order = 'hwc'
 
@@ -170,6 +172,10 @@ class SimDataset(SyntheticDataset):
 		frame = self._frames[index]
 
 		img = self.load_image(frame)
+		if self.just_image:
+			if self.crop_undistortions:
+				img = self.crop(img)
+			return ImageBatch(img, frame=frame)
 
 		gbuffers = [self.gbuffer_loaders[g](frame) for g in self.gbuffers]
 		gbuffers = np.concatenate(gbuffers, axis=0)
