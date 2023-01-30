@@ -74,10 +74,17 @@ if __name__ == '__main__':
     print('Sampling crops...')
 
     ip = 0
+    valid = open(args.out_dir / f'valid_{args.name}.csv', 'w')
+    failed = open(args.out_dir / f'failed_{args.name}.csv', 'w')
+    failed_counter = 0
     with open(args.out_dir / f'crop_{args.name}.csv', 'w') as log:
         log.write('id,run_id,camera,ts,r0,r1,c0,c1\n')
         with torch.no_grad():
             for i, batch in enumerate(tqdm(loader)):
+
+                if batch.img is None:
+                    failed.write(f'{str(batch.frame[0])}\n')
+                    continue
                 
                 n,_,h,w = batch.img.shape
                 assert n == 1
@@ -100,6 +107,8 @@ if __name__ == '__main__':
                     ip += 1
                     pass
 
+                valid.write(f'{str(batch.frame[0])}\n')
+
                 samples = torch.cat(samples, 0)
                 samples = samples.to(device, non_blocking=True)
                 f = extract(samples)
@@ -108,6 +117,8 @@ if __name__ == '__main__':
                 pass
             pass
         pass
+    valid.close()
+    failed.close()
 
     print('Saving features.')
     np.savez_compressed(args.out_dir / f'crop_{args.name}', crops=features)

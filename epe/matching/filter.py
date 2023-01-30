@@ -11,7 +11,7 @@ from epe.dataset.utils import load_crops
 logger = logging.getLogger('epe.matching.filter')
 
 
-def load_matching_crops(path, source_dataset_name, target_dataset_name):
+def load_matching_crops(path, source_dataset_name='', target_dataset_name=''):
 	""" Loads pairs of crops from a csv file. """
 
 	logger.debug(f'Loading cached crop matches from "{path}" ...')
@@ -20,8 +20,8 @@ def load_matching_crops(path, source_dataset_name, target_dataset_name):
 	with open(path) as file:
 		reader = csv.DictReader(file)
 		for row in reader:
-			src_crops.append((os.path.join(source_dataset_name, row['src_path']), int(row['src_r0']), int(row['src_r1']), int(row['src_c0']), int(row['src_c1'])))
-			dst_crops.append((os.path.join(target_dataset_name, row['dst_path']), int(row['dst_r0']), int(row['dst_r1']), int(row['dst_c0']), int(row['dst_c1'])))
+			src_crops.append((os.path.join(source_dataset_name, row['src_run_id'], row['src_camera'], row['src_ts']), int(row['src_r0']), int(row['src_r1']), int(row['src_c0']), int(row['src_c1'])))
+			dst_crops.append((os.path.join(target_dataset_name, row['dst_run_id'], row['dst_camera'], row['dst_ts']), int(row['dst_r0']), int(row['dst_r1']), int(row['dst_c0']), int(row['dst_c1'])))
 			pass
 		pass
 
@@ -34,12 +34,15 @@ def save_matching_crops(src_crops, dst_crops, path):
 	""" Saves pairs of matched crops to a csv file. """
 
 	with open(path, 'w', newline='') as csvfile:
-		fieldnames = ['src_path', 'src_r0', 'src_r1', 'src_c0', 'src_c1', 'dst_path', 'dst_r0', 'dst_r1', 'dst_c0', 'dst_c1']
+		fieldnames = ['src_run_id', 'src_camera', 'src_ts', 'src_r0', 'src_r1', 'src_c0', 'src_c1', 'dst_run_id', 'dst_camera', 'dst_ts', 'dst_r0', 'dst_r1', 'dst_c0', 'dst_c1']
 		writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 		writer.writeheader()
 
 		for src, dst in zip(src_crops, dst_crops):
-			writer.writerow({'src_path':src[0], 'src_r0':src[1], 'src_r1':src[2], 'src_c0':src[3], 'src_c1':src[4], 'dst_path':dst[0], 'dst_r0':dst[1], 'dst_r1':dst[2], 'dst_c0':dst[3], 'dst_c1':dst[4]})
+			writer.writerow({
+							'src_run_id':src[0], 'src_camera':src[1], 'src_ts':src[2], 'src_r0':src[3], 'src_r1':src[4], 'src_c0':src[5], 'src_c1':src[6],
+							'dst_run_id':dst[0], 'dst_camera':dst[1], 'dst_ts':dst[2], 'dst_r0':dst[3], 'dst_r1':dst[4], 'dst_c0':dst[5], 'dst_c1':dst[6]
+			})
 			pass
 		pass
 	pass
@@ -74,7 +77,7 @@ def load_and_filter_matching_crops(knn_path, src_crop_path, dst_crop_path, max_d
 	filtered_src_crops = []
 	filtered_dst_crops = []
 
-	for i in tqdm(range(src_ids.shape[0])):
+	for i in tqdm(range(src_ids.shape[0]), total=src_ids.shape[0]):
 
 		src_id = int(src_ids[i])
 		dst_id = int(dst_indices[src_id, int(knn[i])])
