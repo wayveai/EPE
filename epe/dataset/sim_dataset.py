@@ -149,18 +149,23 @@ class SimDataset(SyntheticDataset):
 
 	def load_image(self, frame):
 		# load image
-		img = fetch_image(run_id=frame.run_id, camera=frame.camera_id,
-		timestamp=frame.timestamp, image_source='sim', order=self.order)
-		img = img.astype(np.float32) / 255.0
-		img = mat2tensor(img)
+		max_num_tries = 4
+		for num_try in range(max_num_tries):
+			try:
+				img = fetch_image(run_id=frame.run_id, camera=frame.camera_id,
+				timestamp=frame.timestamp, image_source='sim', order=self.order)
+				img = img.astype(np.float32) / 255.0
+				img = mat2tensor(img)
 
-		# undistort
-		img = img.unsqueeze(0)
-		img = undistort(img, intrinsics=self.intrinsics, distortion=self.distortion, outrinsics=self.outrinsics)
-		img = img.squeeze()
-		img = img[:, :self.shape[0], :self.shape[1]]
-
-		return img
+				# undistort
+				img = img.unsqueeze(0)
+				img = undistort(img, intrinsics=self.intrinsics, distortion=self.distortion, outrinsics=self.outrinsics)
+				img = img.squeeze()
+				img = img[:, :self.shape[0], :self.shape[1]]
+				return img
+			except:
+				continue
+		return None
 
 	def crop(self, x):
 		if x is None:
