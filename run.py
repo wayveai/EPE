@@ -175,8 +175,6 @@ class EPEExperiment(ee.GANExperiment):
 		g_buffers = wandb.config['fake_dataset']['g_buffers']
 		sim_data_modes = ['rgb', 'segmentation', 'segmentation-mseg', *g_buffers]
 		real_data_modes = ['rgb', 'segmentation-mseg']
-		real_data_root = wandb.config['real_dataset']['data_root']
-		sim_data_root = wandb.config['fake_dataset']['data_root']
 		gbuf_stats_path = wandb.config['fake_dataset']['gbuf_stats_path']
 		gbuf_stats = torch.load(gbuf_stats_path)
 
@@ -184,9 +182,9 @@ class EPEExperiment(ee.GANExperiment):
 		# training
 		if self.action == 'train':
 			source_dataset = fake_datasets[self.fake_name](ds.utils.read_filelist(self.fake_train_path,
-							sim_data_modes, dataset_name=self.fake_dataset_name), data_root=sim_data_root, gbuffers=g_buffers, gbuf_mean=gbuf_stats['gbuf_mean'], gbuf_std=gbuf_stats['gbuf_std'])
+							sim_data_modes, dataset_name=self.fake_dataset_name), gbuffers=g_buffers, gbuf_mean=gbuf_stats['gbuf_mean'], gbuf_std=gbuf_stats['gbuf_std'])
 			self.dataset_fake = source_dataset
-			target_dataset = ds.RobustlyLabeledDataset(self.real_name, ds.utils.read_filelist(self.real_basepath, real_data_modes, dataset_name=self.real_dataset_name), data_root=real_data_root)
+			target_dataset = ds.RobustlyLabeledDataset(self.real_name, ds.utils.read_filelist(self.real_basepath, real_data_modes, dataset_name=self.real_dataset_name))
 
 			if self.sampling == 'matching':
 				self.dataset_train = MatchedCrops(source_dataset, target_dataset, self.sample_cfg, self.fake_dataset_name, self.real_dataset_name)
@@ -207,12 +205,12 @@ class EPEExperiment(ee.GANExperiment):
 			# TODO: add dataset mean and std 
 			self.dataset_fake_val = \
 			fake_datasets[self.fake_name](ds.utils.read_filelist(self.fake_test_path,
-				sim_data_modes), data_root=sim_data_root, gbuffers=g_buffers,
+				sim_data_modes), gbuffers=g_buffers,
 				gbuf_mean=gbuf_stats['gbuf_mean'],
 				gbuf_std=gbuf_stats['gbuf_std'])
 		else:
 			self.dataset_fake_val = fake_datasets[self.fake_name](ds.utils.read_filelist(self.fake_val_path, sim_data_modes),
-				data_root=sim_data_root, gbuffers=g_buffers,
+				gbuffers=g_buffers,
 				gbuf_mean=gbuf_stats['gbuf_mean'], gbuf_std=gbuf_stats['gbuf_std'])
 			pass
 

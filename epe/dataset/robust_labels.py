@@ -12,7 +12,7 @@ from wayve.ai.lib.data import fetch_label
 logger = logging.getLogger('epe.dataset.robust')
 
 class RobustlyLabeledDataset(ImageDataset):
-	def __init__(self, name, frames, img_transform=None, label_transform=None, data_root='', shape=(600, 960)):
+	def __init__(self, name, frames, img_transform=None, label_transform=None, shape=(600, 960)):
 		""" Create an image dataset with robust labels.
 
 		name -- Name of dataset, used for debug output and finding corresponding sampling strategy

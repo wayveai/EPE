@@ -47,14 +47,13 @@ def material_from_gt_label(gt_labelmap):
 
 
 class SimDataset(SyntheticDataset):
-	def __init__(self, frames, transform=None, gbuffers='fake', data_root='', shape=(600, 960), just_image=False, inference=False,
+	def __init__(self, frames, transform=None, gbuffers='fake', shape=(600, 960), just_image=False, inference=False,
 				gbuf_mean=None,
 				gbuf_std=None, crop_undistortions=True):
 		super(SimDataset, self).__init__('SIM')
 
 		self.transform = transform
 		self.gbuffers  = gbuffers
-		self.data_root = data_root
 		self.shape = shape
 		self.inference = inference
 
