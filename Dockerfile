@@ -50,8 +50,6 @@ COPY EPE ${EPE_DIR}
 RUN pip install -e ${EPE_DIR}
 WORKDIR ${EPE_DIR}
 
-COPY ../../metadata /config
-
 # installing some pip packages in conda environment
 RUN conda config --set pip_interop_enabled True
 
@@ -59,11 +57,13 @@ RUN pip install git+https://github.com/EyalMichaeli/PerceptualSimilarity.git
 
 COPY ../../WayveCode /home/${USERNAME}/WayveCode
 
-RUN /home/${USERNAME}/WayveCode/wayve/ai/lib/conda.sh base ${EPE_DIR}/requirements-ailib.txt
+RUN /home/${USERNAME}/WayveCode/wayve/ai/lib/conda.sh -e base -r ${EPE_DIR}/requirements-ailib.txt
 
 # Running in azureml using python
 RUN mkdir -p /app/python_runtime/python3/bin
 RUN ln -s ${CONDA_DIR}/bin/python /app/python_runtime/python3/bin/python3
+
+COPY ../../metadata/urban-driving /config
 
 # For interactive shell
 RUN conda init bash
