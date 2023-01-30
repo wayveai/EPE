@@ -38,7 +38,7 @@ class ImageDataset(torch.utils.data.Dataset):
 		self.data_root = data_root
 
 	def _load_img(self, frame):
-		img = fetch_image(run_id=frame.run_id, camera=frame.camera_id, timestamp=frame.timestamp, order='hwc')
+		img = fetch_image(run_id=frame.run_id, camera=frame.camera_id, timestamp=frame.timestamp, order='hwc', write_to_cache=False)
 		calibration = load_camera_calibrations(
 			run_id=frame.run_id,
 			camera_names=(frame.camera_id,),
