@@ -38,7 +38,7 @@ class ImageBatch(Batch):
     def __init__(self, img, frame=None, coords=None):
         self.img      = _safe_expand(img)
         self.frame     = frame
-        self._coords  = (0, img.shape[-2], 0, img.shape[-1]) if coords is None else coords
+        self._coords  = (0, img.shape[-2], 0, img.shape[-1]) if coords is None and self.img is not None else coords
         pass
 
     def to(self, device):
