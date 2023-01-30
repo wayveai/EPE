@@ -129,7 +129,7 @@ class ProjectionDiscriminator(nn.Module):
 		else:
 			self.out = nn.Sequential(nn.Conv2d(dim_out,dim_out,3,padding=1), nn.LeakyReLU(0.2, True), nn.Conv2d(dim_out, 1, 1))
 		self.num_layers = num_layers+1
-		self.embedding = nn.Embedding(194,dim_out)
+		self.embedding = nn.Embedding(26,dim_out)
 		self.num_layers = num_layers+1
 
 		for m in self.modules():
