@@ -20,6 +20,10 @@ class Frame():
     def __hash__(self) -> int:
         return hash((self.run_id, self.timestamp, self.camera_id))
 
+    # defined a to string method 
+    def __str__(self) -> str:
+        return f'{self.run_id},{self.camera_id},{self.timestamp}'
+
 
 def read_filelist(filelist_path):
     frames = []
@@ -77,8 +81,10 @@ def read_azure_filelist(path_to_filelist, modes=['rgb'], dataset_name='urban-dri
 def load_crops(path):
     """ Load crop info from a csv file.
 
-    The file is expected to have columns path,r0,r1,c0,c1
-    path -- Path to image
+    The file is expected to have columns run_id,camera,ts,r0,r1,c0,c1
+    run_id -- run_id
+    camera -- camera id name (e.g. 'front-forward')
+    ts -- timestamp
     r0 -- top y coordinate
     r1 -- bottom y coordinate
     c0 -- left x coordinate
@@ -96,7 +102,8 @@ def load_crops(path):
     with open(path) as file:
         reader = csv.DictReader(file)
         for row in tqdm(reader):
-            crops.append((row['path'], int(row['r0']), int(
+            # print row keys
+            crops.append((row['run_id'], row['camera'], row['ts'], int(row['r0']), int(
                 row['r1']), int(row['c0']), int(row['c1'])))
             pass
         pass
