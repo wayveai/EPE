@@ -107,8 +107,10 @@ class MatchedCrops(PairedDataset):
 				p   = random.random()
 				idx = np.min(np.nonzero(p<self._cumsum)[0])
 				pass
-			return self._get_cropped_items(idx, idx)
-		except KeyError:
+			ret  = self._get_cropped_items(idx, idx)
+			return ret
+		except KeyError as e:
+			print('KeyError', e)
 			return self.__getitem__(random.randint(0, len(self.src_crops)-1))
 
 	def __len__(self):
