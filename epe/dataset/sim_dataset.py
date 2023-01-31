@@ -120,8 +120,8 @@ class SimDataset(SyntheticDataset):
 		else:
 			return {}
 
-	def get_id(self, img_filename):
-		return self._frame2id.get(img_filename)
+	def get_id(self, frame):
+		return self._frame2id.get(frame)
 
 
 	def load_normal(self, frame):
@@ -136,7 +136,6 @@ class SimDataset(SyntheticDataset):
 	def load_depth(self, frame):
 		depth = fetch_label(run_id=frame.run_id, camera=frame.camera_id,
         timestamp=frame.timestamp, label_type='depth', image_source='sim')
-		print(depth.max(), depth.min(), depth.dtype)
 		# TODO check dtype
 		depth = np_inverse_depth_invm_to_depth_m(depth)
 		depth = np.transpose(depth, (2, 0, 1))
