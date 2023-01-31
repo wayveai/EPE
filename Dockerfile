@@ -46,10 +46,6 @@ RUN conda config --set solver libmamba
 RUN conda env update --name base --file /home/${USERNAME}/environment.yaml &&\
     conda clean -tipy
 
-COPY EPE ${EPE_DIR}
-RUN pip install -e ${EPE_DIR}
-WORKDIR ${EPE_DIR}
-
 # installing some pip packages in conda environment
 RUN conda config --set pip_interop_enabled True
 
@@ -58,6 +54,10 @@ RUN pip install git+https://github.com/EyalMichaeli/PerceptualSimilarity.git
 COPY ../../WayveCode /home/${USERNAME}/WayveCode
 
 RUN /home/${USERNAME}/WayveCode/wayve/ai/lib/conda.sh -e base -r ${EPE_DIR}/requirements-ailib.txt
+
+COPY EPE ${EPE_DIR}
+RUN pip install -e ${EPE_DIR}
+WORKDIR ${EPE_DIR}
 
 # Running in azureml using python
 RUN mkdir -p /app/python_runtime/python3/bin
@@ -69,4 +69,4 @@ COPY ../../metadata/urban-driving /config
 RUN conda init bash
 RUN echo "conda activate base" >> /home/$USERNAME/.bashrc
 
-ENTRYPOINT [ "python", "/app/main.py"]
+ENTRYPOINT [ "python", "/app/main.py", '/config/train_configs']
