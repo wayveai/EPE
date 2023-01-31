@@ -20,7 +20,11 @@ class Frame():
     def __hash__(self) -> int:
         return hash((self.run_id, self.timestamp, self.camera_id))
 
-    # defined a to string method 
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Frame):
+            return False
+        return self.run_id == other.run_id and self.timestamp == other.timestamp and self.camera_id == other.camera_id
+
     def __str__(self) -> str:
         return f'{self.run_id},{self.camera_id},{self.timestamp}'
 
