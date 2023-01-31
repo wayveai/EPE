@@ -6,7 +6,7 @@ import os
 import numpy as np
 from tqdm import tqdm
 
-from epe.dataset.utils import load_crops
+from epe.dataset.utils import load_crops, Frame
 
 logger = logging.getLogger('epe.matching.filter')
 
@@ -20,8 +20,12 @@ def load_matching_crops(path, source_dataset_name='', target_dataset_name=''):
 	with open(path) as file:
 		reader = csv.DictReader(file)
 		for row in reader:
-			src_crops.append((os.path.join(source_dataset_name, row['src_run_id'], row['src_camera'], row['src_ts']), int(row['src_r0']), int(row['src_r1']), int(row['src_c0']), int(row['src_c1'])))
-			dst_crops.append((os.path.join(target_dataset_name, row['dst_run_id'], row['dst_camera'], row['dst_ts']), int(row['dst_r0']), int(row['dst_r1']), int(row['dst_c0']), int(row['dst_c1'])))
+			# make src_frame of type Frame
+			src_frame = Frame(row['src_run_id'], row['src_ts'], camera_id=row['src_camera'])
+			dst_frame = Frame(row['dst_run_id'], row['dst_ts'], camera_id=row['dst_camera'])
+
+			src_crops.append((src_frame, int(row['src_r0']), int(row['src_r1']), int(row['src_c0']), int(row['src_c1'])))
+			dst_crops.append((dst_frame, int(row['dst_r0']), int(row['dst_r1']), int(row['dst_c0']), int(row['dst_c1'])))
 			pass
 		pass
 
