@@ -51,8 +51,8 @@ RUN conda config --set pip_interop_enabled True
 
 RUN pip install git+https://github.com/EyalMichaeli/PerceptualSimilarity.git
 
+COPY EPE/requirements-ailib.txt ${EPE_DIR}/requirements-ailib.txt
 COPY ../../WayveCode /home/${USERNAME}/WayveCode
-
 RUN /home/${USERNAME}/WayveCode/wayve/ai/lib/conda.sh -e base -r ${EPE_DIR}/requirements-ailib.txt
 
 COPY EPE ${EPE_DIR}
@@ -69,4 +69,4 @@ COPY ../../metadata/urban-driving /config
 RUN conda init bash
 RUN echo "conda activate base" >> /home/$USERNAME/.bashrc
 
-ENTRYPOINT [ "python", "/app/main.py", '/config/train_configs']
+ENTRYPOINT [ "python", "/app/main.py"]
