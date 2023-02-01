@@ -38,7 +38,7 @@ out_dir = '/home/kacper/data/out'
 
 car = 'ningaloo--3_6_190--jaguaripacenoslipdynamics--ningaloo_av_2_0'
 data_root = dataset_meta_path
-video_test_path = os.path.join(dataset_meta_path, 'sim_files.csv')
+video_test_path = '/home/kacper/code/metadata/urban-driving/sim_files.csv'
 
 SAMPLING_RATE = 1
 start_index = 0
@@ -59,14 +59,12 @@ print([x.item() for x in list(gbuf_stats['gbuf_mean'])])
 print([x.item() for x in list(gbuf_stats['gbuf_std'])])
 # %%
 
-dataset_fake_val = SimDataset(ds.utils.read_filelist(video_test_path,
-    sim_data_modes), data_root=data_root, gbuffers=g_buffers, inference=True,
+dataset_fake_val = SimDataset(ds.utils.read_filelist(video_test_path),
+    gbuffers=g_buffers, inference=True,
     gbuf_mean=gbuf_stats['gbuf_mean'], gbuf_std=gbuf_stats['gbuf_std'], 
     )
-# %%
-print(len(dataset_fake_val))
-# %%
 
+# %%
 def seed_worker(id):
     random.seed(torch.initial_seed() % np.iinfo(np.int32).max)
     np.random.seed(torch.initial_seed() % np.iinfo(np.int32).max)
