@@ -238,6 +238,17 @@ class EPEExperiment(ee.GANExperiment):
 		backprop_target = float(self.cfg['discriminator'].get('backprop_target', 0.6))
 
 
+		if self.pretrained_name is not None:
+			api = wandb.Api()
+			runs = api.runs(path="wayve-ai/EPE", filters={"display_name": self.pretrained_name})
+			pretrained_run = runs[0]
+			gen_cfg = dict(pretrained_run.config.get('generator', {}))
+			gen_cfg = dict(gen_cfg.get('config', {}))
+			gen_cfg['num_classes']          = self.dataset_fake.num_classes
+			gen_cfg['num_gbuffer_channels'] = self.dataset_fake.num_gbuffer_channels
+			gen_cfg['cls2gbuf']             = self.dataset_fake.cls2gbuf
+
+
 		if generator_type == 'hr':
 			generator = nw.ResidualGenerator(nw.make_ienet(self.gen_cfg))
 			pass

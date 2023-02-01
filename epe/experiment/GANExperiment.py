@@ -154,6 +154,19 @@ class GANExperiment(BaseExperiment):
 
 		self.wandb_run.log_artifact(artifact)
 
+	def _load_pretrained_generator(self):
+		assert self.pretrained_name is not None
+		api = wandb.Api()
+		artifact = api.artifact(f'wayve-ai/EPE/{self.pretrained_name}:latest')
+		assert artifact.logged_by().name == self.pretrained_name
+		artifact_save_path = os.path.join(self.weight_dir, self.pretrained_name)
+		print('artifact_save_path:', artifact_save_path)
+		weight_path = artifact.download(os.path.join(artifact_save_path, 'artifacts', self.pretrained_name, artifact.version))
+		print('weight_path', weight_path)
+		weight_path = os.path.join(weight_path, f'{self.pretrained_name}_gen-network.pth.tar')
+
+		self.gen_state.network.load_state_dict(torch.load(weight_path, map_location=self.device))
+
 	def _load_model(self):
 		""" Load a generator and a discriminator with networks states each from file. """
 		

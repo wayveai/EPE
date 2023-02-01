@@ -344,6 +344,7 @@ class BaseExperiment:
 			self.weight_init = f'{self.wandb_run.name}/{self.resume_step}'
 		else:
 			self.weight_init     = self.cfg.get('name_load', None)
+		self.pretrained_name 	 = self.cfg.get('pretrained_name', None)
 		self.dbg_dir         = Path(self.cfg.get('out_dir', './out/'))
 		self.result_ext      = '.jpg' 
 
@@ -450,6 +451,8 @@ class BaseExperiment:
 	def _load_model(self):
 		raise NotImplementedError
 	
+	def _load_pretrained_generator(self):
+		raise NotImplementedError
 
 	def _profiler_schedule(self):
 		def schedule(a):
@@ -546,6 +549,8 @@ class BaseExperiment:
 		if self.weight_init is not None:
 			self._load_model()
 			pass
+		elif self.pretrained_name is not None:
+			self._load_pretrained_generator()
 
 		self.network.train()
 
