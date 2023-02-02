@@ -41,6 +41,8 @@ RUN useradd --create-home -s /bin/bash --no-user-group -u $USERID $USERNAME && \
 
 COPY EPE/environment.yaml /home/${USERNAME}/environment.yaml
 RUN conda update -n base conda
+RUN conda install -n base conda-libmamba-solver
+RUN conda config --set solver libmamba
 RUN conda env update --name base --file /home/${USERNAME}/environment.yaml &&\
     conda clean -tipy
 
