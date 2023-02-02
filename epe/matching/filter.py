@@ -2,6 +2,7 @@ import csv
 import logging
 from pathlib import Path
 import os
+import random
 
 import numpy as np
 from tqdm import tqdm
@@ -11,7 +12,7 @@ from epe.dataset.utils import load_crops, Frame
 logger = logging.getLogger('epe.matching.filter')
 
 
-def load_matching_crops(path, source_dataset_name='', target_dataset_name=''):
+def load_matching_crops(path, source_dataset_name='', target_dataset_name='', max_samples=1_000_000):
 	""" Loads pairs of crops from a csv file. """
 
 	logger.debug(f'Loading cached crop matches from "{path}" ...')
@@ -19,6 +20,7 @@ def load_matching_crops(path, source_dataset_name='', target_dataset_name=''):
 	dst_crops = []
 	with open(path) as file:
 		reader = csv.DictReader(file)
+		counter = 0
 		for row in reader:
 			# make src_frame of type Frame
 			src_frame = Frame(row['src_run_id'], row['src_ts'], camera_id=row['src_camera'])
@@ -26,8 +28,17 @@ def load_matching_crops(path, source_dataset_name='', target_dataset_name=''):
 
 			src_crops.append((src_frame, int(row['src_r0']), int(row['src_r1']), int(row['src_c0']), int(row['src_c1'])))
 			dst_crops.append((dst_frame, int(row['dst_r0']), int(row['dst_r1']), int(row['dst_c0']), int(row['dst_c1'])))
+			counter += 1
+			if counter > max_samples:
+				break
 			pass
 		pass
+
+	# # constant seed ensures same set of images between different experiments
+	# random.seed(1)
+	# zipped = list(zip(src_crops, dst_crops))
+	# sampled = random.sample(zipped, 1_000_000)
+	# src_crops, dst_crops = zip(*sampled)
 
 	logger.debug(f'Loaded {len(src_crops)} crop matches.')
 	return src_crops, dst_crops
