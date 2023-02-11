@@ -43,7 +43,8 @@ class RobustlyLabeledDataset(ImageDataset):
 		return self.frame2id.get(img_filename)
 
 	def load_label(self, frame):
-		return fetch_label(run_id=frame.run_id, camera=frame.camera_id, timestamp=frame.timestamp, label_type='segmentation')
+		label = fetch_label(run_id=frame.run_id, camera=frame.camera_id, timestamp=frame.timestamp, label_type='segmentation')
+		return label
 
 	def __getitem__(self, index):
 		
