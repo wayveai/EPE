@@ -8,6 +8,7 @@ if __name__ == '__main__':
 	parser.add_argument('--config', type=str, help='path to directory containing train yaml configs')
 	parser.add_argument('--session_path ', default='')
 	parser.add_argument('--session_dir_name ', default='')
+	parser.add_argument('--tags', nargs='+', type=str, default=[])
 
 	args = parser.parse_args()
 
@@ -23,7 +24,7 @@ if __name__ == '__main__':
 
 		cmd = ['python', '/app/run.py', '--log', 'info', '--log_dir',
 		'/app/log', '--action', 'train', '--gpu', str(i), '--notes',config_name,
-		'--config', config_name]
+		'--config', config_name, '--tags', *args.tags]
 		p = subprocess.Popen(cmd)
 		processes.append(p)
 

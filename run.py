@@ -93,15 +93,14 @@ class EPEExperiment(ee.GANExperiment):
 	def __init__(self, args):
 		self.resume_id = args.resume_id
 		self.resume_step = args.resume_step
+		tags = args.tags
 
 		if args.disabled:
 			os.environ['WANDB_DISABLED'] = 'true'
-			self.wandb_run = wandb.init(project='EPE', mode="disabled")
+			self.wandb_run = wandb.init(project='EPE', mode="disabled", tags=tags)
 		elif args.resume_id:
-			tags = ['urban-driving']
 			self.wandb_run = wandb.init(project='EPE', id=args.resume_id, resume='must', tags=tags, notes=args.notes, entity='wayve-ai')
 		else:
-			tags = ['urban-driving']
 			self.wandb_run = wandb.init(project='EPE', tags=tags, notes=args.notes, entity='wayve-ai')
 
 		super(EPEExperiment, self).__init__(args)

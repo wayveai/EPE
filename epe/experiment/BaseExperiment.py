@@ -693,6 +693,7 @@ class BaseExperiment:
 		parser.add_argument('--disabled', default=False, action='store_true')
 		parser.add_argument('--session_path ', default='')
 		parser.add_argument('--session_dir_name ', default='')
+		parser.add_argument('--tags', nargs='+', type=str, default=[])
 		pass
 
 	
