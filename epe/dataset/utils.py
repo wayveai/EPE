@@ -1,3 +1,4 @@
+from collections import defaultdict
 import csv
 import logging
 from pathlib import Path
@@ -12,10 +13,16 @@ logger = logging.getLogger('epe.dataset.utils')
 
 
 class Frame():
-    def __init__(self, run_id, timestamp, camera_id='front-forward'):
+    def __init__(self, run_id, timestamp, camera_id='front-forward', is_sim=None, root_path=''):
         self.run_id = run_id
         self.timestamp = int(timestamp)
         self.camera_id = camera_id
+        self.root_path = root_path
+
+        if not is_sim:
+            self.is_sim = 'ningaloo' in self.run_id
+        else:
+            self.is_sim = is_sim
 
     def __hash__(self) -> int:
         return hash((self.run_id, self.timestamp, self.camera_id))
@@ -24,6 +31,18 @@ class Frame():
         if not isinstance(other, Frame):
             return False
         return self.run_id == other.run_id and self.timestamp == other.timestamp and self.camera_id == other.camera_id
+
+    def get_path(self, mode='rgb'):
+        if not self.is_sim and mode == 'rgb':
+            camera_id = self.camera_id
+        else:
+            camera_id = self.camera_id + f'--{mode}'
+
+        ext = defaultdict(lambda: 'png')
+        ext['rgb'] = 'jpeg'
+
+        file_name = str(self.timestamp).zfill(16) + 'unixus.' + ext[mode]
+        return os.path.join(self.root_path, self.run_id, 'cameras', camera_id, file_name)
 
     def __str__(self) -> str:
         return f'{self.run_id},{self.camera_id},{self.timestamp}'
